@@ -93,7 +93,7 @@ def tree_to_dict(tree):
 # ===== Main Execution =====
 
 def main():
-    data = pd.read_csv("raisin.csv")
+    data = pd.read_csv("wdbc.csv")
     data = data.rename(columns={"class": "label"})
 
     # Optional: Convert features to binary (0/1) based on mean — improves splits
@@ -109,6 +109,7 @@ def main():
     for i in range(k_fold):
         test_data = fold_data[fold_data["k_fold"] == i]
         train_data = fold_data[fold_data["k_fold"] != i]
+        print(f"test_data: {len(test_data)}")
 
         X_train = train_data.drop(columns=["label", "k_fold"])
         y_train = train_data["label"]
