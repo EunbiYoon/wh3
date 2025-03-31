@@ -25,20 +25,28 @@ class Node:
         self.label = label
         self.children = children if children else {}
 
-def build_tree(X, y, features):
-    if len(y.unique()) == 1:
-        return Node(label=y.iloc[0])
-    if len(features) == 0:
+def build_tree(X, y, features, depth=0, max_depth=5, min_info_gain=1e-5):
+    if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:
         return Node(label=y.mode()[0])
 
-    best_feature = max(features, key=lambda f: information_gain(X, y, f))
+    # Best feature & its info gain
+    info_gains = {f: information_gain(X, y, f) for f in features}
+    best_feature = max(info_gains, key=info_gains.get)
+    best_gain = info_gains[best_feature]
+
+    # 최소 정보 이득 조건 추가
+    if best_gain < min_info_gain:
+        return Node(label=y.mode()[0])
+
     tree = Node(feature=best_feature)
     remaining_features = [f for f in features if f != best_feature]
 
     for value in X[best_feature].unique():
         subset_X = X[X[best_feature] == value].drop(columns=[best_feature])
         subset_y = y[X[best_feature] == value]
-        tree.children[value] = build_tree(subset_X, subset_y, remaining_features)
+        tree.children[value] = build_tree(
+            subset_X, subset_y, remaining_features, depth + 1, max_depth, min_info_gain
+        )
 
     return tree
 
@@ -112,18 +120,28 @@ def random_forest_predict(trees, X):
 
 # ===== Main Execution =====
 
+import matplotlib.pyplot as plt
+
 def main():
-    data = pd.read_csv("raisin.csv")
+    # 결과 저장용 리스트
+    ntrees_list = [1, 5, 10, 20, 30, 40, 50]
+    acc_list, prec_list, rec_list, f1_list = [], [], [], []
+
+    data = pd.read_csv("wdbc.csv")
     data = data.rename(columns={"class": "label"})
 
-    # Binarize features (optional but recommended for decision trees)
+    # numerical & categorical
     for col in data.columns:
-        if col != "label":
-            data[col] = (data[col] > data[col].mean()).astype(int)
+        if col == "label":
+            continue
+        if data[col].dtype == 'object':
+            data[col] = data[col].astype(str)  # categorical 처리
+        else:
+            data[col] = (data[col] > data[col].mean()).astype(int)  # numerical 처리
+
 
     k_fold = 5
     fold_data = cross_validation(data, k_fold)
-    ntrees_list = [1, 5, 10, 20, 30, 40, 50]
 
     for ntrees in ntrees_list:
         print(f"\n🌲 Evaluating Random Forest with {ntrees} trees")
@@ -147,7 +165,7 @@ def main():
 
             predictions = random_forest_predict(trees, X_test)
 
-            # Filter out None predictions and convert to int
+            # Filter out None predictions
             mask = predictions != None
             y_true_valid = np.array(y_test[mask], dtype=int)
             y_pred_valid = np.array(predictions[mask], dtype=int)
@@ -164,11 +182,47 @@ def main():
 
             print(f"[Fold {i}] Acc: {acc:.4f}, Precision: {prec:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
 
+        # 각 ntrees에 대한 평균 성능 저장
+        acc_list.append(np.mean(accs))
+        prec_list.append(np.mean(precisions))
+        rec_list.append(np.mean(recalls))
+        f1_list.append(np.mean(f1s))
+
         print(f"✅ [ntrees={ntrees}] Averages → "
               f"Accuracy: {np.mean(accs):.4f}, "
               f"Precision: {np.mean(precisions):.4f}, "
               f"Recall: {np.mean(recalls):.4f}, "
               f"F1: {np.mean(f1s):.4f}")
+
+    # 그래프 그리기
+    metrics = [acc_list, prec_list, rec_list, f1_list]
+    titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(ntrees_list, metrics[0], marker='o')
+    plt.title("Accuracy")
+    plt.xlabel("ntrees")
+    plt.savefig("wdbc_result_1/accuracy.png")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(ntrees_list, metrics[1], marker='o')
+    plt.title("Precision")
+    plt.xlabel("ntrees")
+    plt.savefig("wdbc_result_1/precision.png")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(ntrees_list, metrics[2], marker='o')
+    plt.title("Recall")
+    plt.xlabel("ntrees")
+    plt.savefig("wdbc_result_1/recall.png")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(ntrees_list, metrics[3], marker='o')
+    plt.title("F1 Score")
+    plt.xlabel("ntrees")
+    plt.savefig("wdbc_result_1/f1score.png")
+
+
 
 if __name__ == "__main__":
     main()
