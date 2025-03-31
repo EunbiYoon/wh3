@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import json
 from sklearn.utils import shuffle
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 # ===== Decision Tree Functions =====
 
@@ -55,7 +56,10 @@ def predict(tree, X):
     return np.array(predictions)
 
 def accuracy(predictions, true_labels):
-    return np.mean(predictions == true_labels)
+    predictions = np.array(predictions)
+    true_labels = np.array(true_labels)
+    valid = predictions != None
+    return np.mean(predictions[valid] == true_labels[valid])
 
 # ===== Cross-validation =====
 
@@ -80,55 +84,91 @@ def cross_validation(data, k_fold):
 
     return pd.concat(fold_list).reset_index(drop=True)
 
-# ===== Tree to JSON Serializable Dict =====
+# ===== Helper Functions =====
 
 def tree_to_dict(tree):
     if tree.label is not None:
-        return {'label': str(tree.label)}  # Ensures label is JSON serializable
+        return {'label': str(tree.label)}
     return {
-        'feature': str(tree.feature),  # Ensures feature is string
+        'feature': str(tree.feature),
         'children': {str(value): tree_to_dict(child) for value, child in tree.children.items()}
     }
+
+def bootstrap_sample(X, y):
+    idxs = np.random.choice(len(X), size=len(X), replace=True)
+    return X.iloc[idxs].reset_index(drop=True), y.iloc[idxs].reset_index(drop=True)
+
+def random_forest_predict(trees, X):
+    tree_preds = np.array([predict(tree, X) for tree in trees])
+    final_preds = []
+    for i in range(X.shape[0]):
+        row_preds = tree_preds[:, i]
+        values, counts = np.unique(row_preds[row_preds != None], return_counts=True)
+        if len(counts) == 0:
+            final_preds.append(None)
+        else:
+            final_preds.append(values[np.argmax(counts)])
+    return np.array(final_preds)
 
 # ===== Main Execution =====
 
 def main():
-    data = pd.read_csv("wdbc.csv")
+    data = pd.read_csv("raisin.csv")
     data = data.rename(columns={"class": "label"})
 
-    # Optional: Convert features to binary (0/1) based on mean — improves splits
+    # Binarize features (optional but recommended for decision trees)
     for col in data.columns:
         if col != "label":
             data[col] = (data[col] > data[col].mean()).astype(int)
 
     k_fold = 5
     fold_data = cross_validation(data, k_fold)
+    ntrees_list = [1, 5, 10, 20, 30, 40, 50]
 
-    accuracies = []
+    for ntrees in ntrees_list:
+        print(f"\n🌲 Evaluating Random Forest with {ntrees} trees")
 
-    for i in range(k_fold):
-        test_data = fold_data[fold_data["k_fold"] == i]
-        train_data = fold_data[fold_data["k_fold"] != i]
-        print(f"test_data: {len(test_data)}")
+        accs, precisions, recalls, f1s = [], [], [], []
 
-        X_train = train_data.drop(columns=["label", "k_fold"])
-        y_train = train_data["label"]
-        X_test = test_data.drop(columns=["label", "k_fold"])
-        y_test = test_data["label"]
+        for i in range(k_fold):
+            test_data = fold_data[fold_data["k_fold"] == i]
+            train_data = fold_data[fold_data["k_fold"] != i]
 
-        tree = build_tree(X_train, y_train, X_train.columns)
-        predictions = predict(tree, X_test)
+            X_train = train_data.drop(columns=["label", "k_fold"])
+            y_train = train_data["label"]
+            X_test = test_data.drop(columns=["label", "k_fold"])
+            y_test = test_data["label"]
 
-        acc = accuracy(predictions, y_test)
-        accuracies.append(acc)
+            trees = []
+            for _ in range(ntrees):
+                X_boot, y_boot = bootstrap_sample(X_train, y_train)
+                tree = build_tree(X_boot, y_boot, X_boot.columns)
+                trees.append(tree)
 
-        print(f"[Fold {i}] Accuracy: {acc:.4f}")
+            predictions = random_forest_predict(trees, X_test)
 
-        if i == 0:
-            with open("decision_tree.json", 'w') as f:
-                json.dump(tree_to_dict(tree), f, indent=4)
+            # Filter out None predictions and convert to int
+            mask = predictions != None
+            y_true_valid = np.array(y_test[mask], dtype=int)
+            y_pred_valid = np.array(predictions[mask], dtype=int)
 
-    print(f"\n✅ Average Accuracy over {k_fold} folds: {np.mean(accuracies):.4f}")
+            acc = accuracy(predictions, y_test)
+            prec = precision_score(y_true_valid, y_pred_valid, zero_division=0)
+            rec = recall_score(y_true_valid, y_pred_valid, zero_division=0)
+            f1 = f1_score(y_true_valid, y_pred_valid, zero_division=0)
+
+            accs.append(acc)
+            precisions.append(prec)
+            recalls.append(rec)
+            f1s.append(f1)
+
+            print(f"[Fold {i}] Acc: {acc:.4f}, Precision: {prec:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
+
+        print(f"✅ [ntrees={ntrees}] Averages → "
+              f"Accuracy: {np.mean(accs):.4f}, "
+              f"Precision: {np.mean(precisions):.4f}, "
+              f"Recall: {np.mean(recalls):.4f}, "
+              f"F1: {np.mean(f1s):.4f}")
 
 if __name__ == "__main__":
     main()
