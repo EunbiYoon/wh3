@@ -1,7 +1,32 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import precision_score, recall_score, f1_score
+import os
+import json
+
+# ===== Main Function =====
+def main():
+    data = load_and_preprocess_data("raisin.csv")
+    fold_data = cross_validation(data, k_fold=5)
+
+    ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
+    plot_metrics(ntrees_list, metrics, save_dir="raisin_result")
+    
+# ===== Preprocessing =====
+def load_and_preprocess_data(filepath):
+    data = pd.read_csv(filepath)
+    data = data.rename(columns={"class": "label"})
+
+    for col in data.columns:
+        if col == "label":
+            continue
+        elif col.endswith("_cat"):
+            data[col] = data[col].astype(str)
+        elif col.endswith("_num"):
+            data[col] = (data[col] > data[col].mean()).astype(int)
+        else:
+            print("There is an error in csv file column name")
+    return data
 
 # ===== Cross-validation =====
 def cross_validation(data, k_fold):
@@ -24,7 +49,6 @@ def cross_validation(data, k_fold):
         fold_list.append(fold_data)
 
     return pd.concat(fold_list).reset_index(drop=True)
-
 
 # ===== Decision Tree =====
 def entropy(y):
@@ -69,6 +93,23 @@ def build_tree(X, y, features, depth=0, max_depth=5, min_info_gain=1e-5):
 
     return tree
 
+def tree_to_dict(node):
+    if node.label is not None:
+        return {"label": int(node.label)}  # ⭐ int64 → int 변환
+    return {
+        "feature": node.feature,
+        "children": {str(k): tree_to_dict(v) for k, v in node.children.items()}
+    }
+
+
+def save_trees_as_json(trees, ntrees, base_dir="saved_trees"):
+    folder = os.path.join(base_dir, f"ntrees_{ntrees}")
+    os.makedirs(folder, exist_ok=True)
+    for i, tree in enumerate(trees, start=1):
+        tree_dict = tree_to_dict(tree)
+        with open(os.path.join(folder, f"tree_{i}.json"), "w") as f:
+            json.dump(tree_dict, f, indent=4)
+
 def predict(tree, X):
     predictions = []
     for _, row in X.iterrows():
@@ -88,6 +129,21 @@ def accuracy(predictions, true_labels):
     valid = predictions != None
     return np.mean(predictions[valid] == true_labels[valid])
 
+def precision(y_true, y_pred):
+    tp = np.sum((y_pred == 1) & (y_true == 1))
+    fp = np.sum((y_pred == 1) & (y_true == 0))
+    return tp / (tp + fp) if (tp + fp) > 0 else 0.0
+
+def recall(y_true, y_pred):
+    tp = np.sum((y_pred == 1) & (y_true == 1))
+    fn = np.sum((y_pred == 0) & (y_true == 1))
+    return tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+def f1_score_manual(y_true, y_pred):
+    p = precision(y_true, y_pred)
+    r = recall(y_true, y_pred)
+    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
+
 # ===== Random Forest Helpers =====
 def bootstrap_sample(X, y):
     idxs = np.random.choice(len(X), size=len(X), replace=True)
@@ -104,24 +160,6 @@ def random_forest_predict(trees, X):
         else:
             final_preds.append(values[np.argmax(counts)])
     return np.array(final_preds)
-
-# ===== Preprocessing =====
-def load_and_preprocess_data(filepath):
-    data = pd.read_csv(filepath)
-    data = data.rename(columns={"class": "label"})
-
-    for col in data.columns:
-        if col == "label":
-            continue
-        # categorical attribute
-        if data[col].dtype == 'object': 
-            data[col] = data[col].astype(str)
-            print(f"I am categorical attribute ====> col : {col} / numerical attribute : {data[col]}\n")
-        # numerical attribute
-        else:
-            data[col] = (data[col] > data[col].mean()).astype(int)
-            print(f"I am numercial attribute ====> col : {col} / numerical attribute : {data[col]}\n")
-    return data
 
 # ===== Evaluation & Plotting =====
 def evaluate_random_forest(fold_data, k_fold):
@@ -142,6 +180,9 @@ def evaluate_random_forest(fold_data, k_fold):
             y_test = test_data["label"]
 
             trees = [build_tree(*bootstrap_sample(X_train, y_train), X_train.columns) for _ in range(ntrees)]
+            
+            # ⭐ Save trees to JSON
+            save_trees_as_json(trees, ntrees)
             predictions = random_forest_predict(trees, X_test)
 
             mask = predictions != None
@@ -149,9 +190,9 @@ def evaluate_random_forest(fold_data, k_fold):
             y_pred_valid = np.array(predictions[mask], dtype=int)
 
             accs.append(accuracy(predictions, y_test))
-            precisions.append(precision_score(y_true_valid, y_pred_valid, zero_division=0))
-            recalls.append(recall_score(y_true_valid, y_pred_valid, zero_division=0))
-            f1s.append(f1_score(y_true_valid, y_pred_valid, zero_division=0))
+            precisions.append(precision(y_true_valid, y_pred_valid))
+            recalls.append(recall(y_true_valid, y_pred_valid))
+            f1s.append(f1_score_manual(y_true_valid, y_pred_valid))
 
             print(f"[Fold {i}] Acc: {accs[-1]:.4f}, Precision: {precisions[-1]:.4f}, Recall: {recalls[-1]:.4f}, F1: {f1s[-1]:.4f}")
 
@@ -175,13 +216,7 @@ def plot_metrics(ntrees_list, metrics, save_dir):
         plt.xlabel("ntrees")
         plt.savefig(f"{save_dir}/{fname}")
 
-# ===== Main Function =====
-def main():
-    data = load_and_preprocess_data("loan.csv")
-    fold_data = cross_validation(data, k_fold=5)
 
-    ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
-    plot_metrics(ntrees_list, metrics, save_dir="wdbc_result_1")
 
 if __name__ == "__main__":
     main()
