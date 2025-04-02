@@ -1,11 +1,32 @@
 import pandas as pd
 import numpy as np
-import json
-from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
 from sklearn.metrics import precision_score, recall_score, f1_score
 
-# ===== Decision Tree Functions =====
+# ===== Cross-validation =====
+def cross_validation(data, k_fold):
+    class_0 = data[data['label'] == 0].reset_index(drop=True)
+    class_1 = data[data['label'] == 1].reset_index(drop=True)
 
+    fold_list = []
+
+    for i in range(k_fold):
+        class_0_start = int(len(class_0) * i / k_fold)
+        class_0_end = int(len(class_0) * (i + 1) / k_fold)
+        class_1_start = int(len(class_1) * i / k_fold)
+        class_1_end = int(len(class_1) * (i + 1) / k_fold)
+
+        class_0_fold = class_0.iloc[class_0_start:class_0_end]
+        class_1_fold = class_1.iloc[class_1_start:class_1_end]
+
+        fold_data = pd.concat([class_0_fold, class_1_fold]).copy()
+        fold_data['k_fold'] = i
+        fold_list.append(fold_data)
+
+    return pd.concat(fold_list).reset_index(drop=True)
+
+
+# ===== Decision Tree =====
 def entropy(y):
     class_counts = y.value_counts()
     probabilities = class_counts / len(y)
@@ -29,12 +50,10 @@ def build_tree(X, y, features, depth=0, max_depth=5, min_info_gain=1e-5):
     if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:
         return Node(label=y.mode()[0])
 
-    # Best feature & its info gain
     info_gains = {f: information_gain(X, y, f) for f in features}
     best_feature = max(info_gains, key=info_gains.get)
     best_gain = info_gains[best_feature]
 
-    # 최소 정보 이득 조건 추가
     if best_gain < min_info_gain:
         return Node(label=y.mode()[0])
 
@@ -69,39 +88,7 @@ def accuracy(predictions, true_labels):
     valid = predictions != None
     return np.mean(predictions[valid] == true_labels[valid])
 
-# ===== Cross-validation =====
-
-def cross_validation(data, k_fold):
-    class_0 = data[data['label'] == 0].reset_index(drop=True)
-    class_1 = data[data['label'] == 1].reset_index(drop=True)
-
-    fold_list = []
-
-    for i in range(k_fold):
-        class_0_start = int(len(class_0) * i / k_fold)
-        class_0_end = int(len(class_0) * (i + 1) / k_fold)
-        class_0_fold = class_0.iloc[class_0_start:class_0_end]
-
-        class_1_start = int(len(class_1) * i / k_fold)
-        class_1_end = int(len(class_1) * (i + 1) / k_fold)
-        class_1_fold = class_1.iloc[class_1_start:class_1_end]
-
-        fold_data = pd.concat([class_0_fold, class_1_fold]).copy()
-        fold_data['k_fold'] = i
-        fold_list.append(fold_data)
-
-    return pd.concat(fold_list).reset_index(drop=True)
-
-# ===== Helper Functions =====
-
-def tree_to_dict(tree):
-    if tree.label is not None:
-        return {'label': str(tree.label)}
-    return {
-        'feature': str(tree.feature),
-        'children': {str(value): tree_to_dict(child) for value, child in tree.children.items()}
-    }
-
+# ===== Random Forest Helpers =====
 def bootstrap_sample(X, y):
     idxs = np.random.choice(len(X), size=len(X), replace=True)
     return X.iloc[idxs].reset_index(drop=True), y.iloc[idxs].reset_index(drop=True)
@@ -118,34 +105,31 @@ def random_forest_predict(trees, X):
             final_preds.append(values[np.argmax(counts)])
     return np.array(final_preds)
 
-# ===== Main Execution =====
-
-import matplotlib.pyplot as plt
-
-def main():
-    # 결과 저장용 리스트
-    ntrees_list = [1, 5, 10, 20, 30, 40, 50]
-    acc_list, prec_list, rec_list, f1_list = [], [], [], []
-
-    data = pd.read_csv("wdbc.csv")
+# ===== Preprocessing =====
+def load_and_preprocess_data(filepath):
+    data = pd.read_csv(filepath)
     data = data.rename(columns={"class": "label"})
 
-    # numerical & categorical
     for col in data.columns:
         if col == "label":
             continue
-        if data[col].dtype == 'object':
-            data[col] = data[col].astype(str)  # categorical 처리
+        # categorical attribute
+        if data[col].dtype == 'object': 
+            data[col] = data[col].astype(str)
+            print(f"I am categorical attribute ====> col : {col} / numerical attribute : {data[col]}\n")
+        # numerical attribute
         else:
-            data[col] = (data[col] > data[col].mean()).astype(int)  # numerical 처리
+            data[col] = (data[col] > data[col].mean()).astype(int)
+            print(f"I am numercial attribute ====> col : {col} / numerical attribute : {data[col]}\n")
+    return data
 
-
-    k_fold = 5
-    fold_data = cross_validation(data, k_fold)
+# ===== Evaluation & Plotting =====
+def evaluate_random_forest(fold_data, k_fold):
+    ntrees_list = [1, 5, 10, 20, 30, 40, 50]
+    acc_list, prec_list, rec_list, f1_list = [], [], [], []
 
     for ntrees in ntrees_list:
         print(f"\n🌲 Evaluating Random Forest with {ntrees} trees")
-
         accs, precisions, recalls, f1s = [], [], [], []
 
         for i in range(k_fold):
@@ -157,72 +141,47 @@ def main():
             X_test = test_data.drop(columns=["label", "k_fold"])
             y_test = test_data["label"]
 
-            trees = []
-            for _ in range(ntrees):
-                X_boot, y_boot = bootstrap_sample(X_train, y_train)
-                tree = build_tree(X_boot, y_boot, X_boot.columns)
-                trees.append(tree)
-
+            trees = [build_tree(*bootstrap_sample(X_train, y_train), X_train.columns) for _ in range(ntrees)]
             predictions = random_forest_predict(trees, X_test)
 
-            # Filter out None predictions
             mask = predictions != None
             y_true_valid = np.array(y_test[mask], dtype=int)
             y_pred_valid = np.array(predictions[mask], dtype=int)
 
-            acc = accuracy(predictions, y_test)
-            prec = precision_score(y_true_valid, y_pred_valid, zero_division=0)
-            rec = recall_score(y_true_valid, y_pred_valid, zero_division=0)
-            f1 = f1_score(y_true_valid, y_pred_valid, zero_division=0)
+            accs.append(accuracy(predictions, y_test))
+            precisions.append(precision_score(y_true_valid, y_pred_valid, zero_division=0))
+            recalls.append(recall_score(y_true_valid, y_pred_valid, zero_division=0))
+            f1s.append(f1_score(y_true_valid, y_pred_valid, zero_division=0))
 
-            accs.append(acc)
-            precisions.append(prec)
-            recalls.append(rec)
-            f1s.append(f1)
+            print(f"[Fold {i}] Acc: {accs[-1]:.4f}, Precision: {precisions[-1]:.4f}, Recall: {recalls[-1]:.4f}, F1: {f1s[-1]:.4f}")
 
-            print(f"[Fold {i}] Acc: {acc:.4f}, Precision: {prec:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
-
-        # 각 ntrees에 대한 평균 성능 저장
         acc_list.append(np.mean(accs))
         prec_list.append(np.mean(precisions))
         rec_list.append(np.mean(recalls))
         f1_list.append(np.mean(f1s))
 
-        print(f"✅ [ntrees={ntrees}] Averages → "
-              f"Accuracy: {np.mean(accs):.4f}, "
-              f"Precision: {np.mean(precisions):.4f}, "
-              f"Recall: {np.mean(recalls):.4f}, "
-              f"F1: {np.mean(f1s):.4f}")
+        print(f"✅ [ntrees={ntrees}] Averages → Acc: {acc_list[-1]:.4f}, Prec: {prec_list[-1]:.4f}, Rec: {rec_list[-1]:.4f}, F1: {f1_list[-1]:.4f}")
 
-    # 그래프 그리기
-    metrics = [acc_list, prec_list, rec_list, f1_list]
+    return ntrees_list, [acc_list, prec_list, rec_list, f1_list]
+
+def plot_metrics(ntrees_list, metrics, save_dir):
     titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
+    filenames = ["accuracy.png", "precision.png", "recall.png", "f1score.png"]
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(ntrees_list, metrics[0], marker='o')
-    plt.title("Accuracy")
-    plt.xlabel("ntrees")
-    plt.savefig("wdbc_result_1/accuracy.png")
+    for metric, title, fname in zip(metrics, titles, filenames):
+        plt.figure(figsize=(6, 4))
+        plt.plot(ntrees_list, metric, marker='o')
+        plt.title(title)
+        plt.xlabel("ntrees")
+        plt.savefig(f"{save_dir}/{fname}")
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(ntrees_list, metrics[1], marker='o')
-    plt.title("Precision")
-    plt.xlabel("ntrees")
-    plt.savefig("wdbc_result_1/precision.png")
+# ===== Main Function =====
+def main():
+    data = load_and_preprocess_data("loan.csv")
+    fold_data = cross_validation(data, k_fold=5)
 
-    plt.figure(figsize=(6, 4))
-    plt.plot(ntrees_list, metrics[2], marker='o')
-    plt.title("Recall")
-    plt.xlabel("ntrees")
-    plt.savefig("wdbc_result_1/recall.png")
-
-    plt.figure(figsize=(6, 4))
-    plt.plot(ntrees_list, metrics[3], marker='o')
-    plt.title("F1 Score")
-    plt.xlabel("ntrees")
-    plt.savefig("wdbc_result_1/f1score.png")
-
-
+    ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
+    plot_metrics(ntrees_list, metrics, save_dir="wdbc_result_1")
 
 if __name__ == "__main__":
     main()
