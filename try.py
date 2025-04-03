@@ -33,6 +33,8 @@ def cross_validation(data, k_fold):
     class_0 = data[data['label'] == 0].reset_index(drop=True)
     class_1 = data[data['label'] == 1].reset_index(drop=True)
 
+    print(class_0)
+    print(class_1)
     fold_list = []
 
     for i in range(k_fold):
@@ -47,6 +49,8 @@ def cross_validation(data, k_fold):
         fold_data = pd.concat([class_0_fold, class_1_fold]).copy()
         fold_data['k_fold'] = i
         fold_list.append(fold_data)
+    
+    print(fold_list)
 
     return pd.concat(fold_list).reset_index(drop=True)
 
