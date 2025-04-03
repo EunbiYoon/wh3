@@ -33,9 +33,7 @@ def cross_validation(data, k_fold):
     class_0 = data[data['label'] == 0].reset_index(drop=True)
     class_1 = data[data['label'] == 1].reset_index(drop=True)
 
-    print(class_0)
-    print(class_1)
-    fold_list = []
+    all_data = pd.DataFrame()  # ❗ 하나의 DataFrame만 사용
 
     for i in range(k_fold):
         class_0_start = int(len(class_0) * i / k_fold)
@@ -47,12 +45,11 @@ def cross_validation(data, k_fold):
         class_1_fold = class_1.iloc[class_1_start:class_1_end]
 
         fold_data = pd.concat([class_0_fold, class_1_fold]).copy()
-        fold_data['k_fold'] = i
-        fold_list.append(fold_data)
-    
-    print(fold_list)
+        fold_data["k_fold"] = i
 
-    return pd.concat(fold_list).reset_index(drop=True)
+        all_data = pd.concat([all_data, fold_data], ignore_index=True)  # 누적
+    all_data.to_excel('aa.xlsx')
+    return all_data
 
 # ===== Decision Tree =====
 def entropy(y):
