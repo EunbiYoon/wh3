@@ -1,5 +1,6 @@
 from graphviz import Digraph
 import json
+import os
 
 def visualize_tree_from_dict(tree_dict, output_file="tree"):
     dot = Digraph()
@@ -23,10 +24,24 @@ def visualize_tree_from_dict(tree_dict, output_file="tree"):
     dot.render(output_file, format="png", cleanup=True)
     print(f"✅ Saved visualization to {output_file}.png")
 
-# 사용 예시
-input_file="ntrees_1/tree_1.json"
-output_file="ntrees_1/ntrees_1.png"
-with open(input_file, "r") as f:
-    tree_data = json.load(f)
+def count_all_files(directory):
+    total_files = 0
+    for root, dirs, files in os.walk(directory):
+        total_files += len(files)
+    return total_files
 
-visualize_tree_from_dict(tree_data, output_file)
+# 🌀 모든 json 파일을 하나씩 input_file로 넣어 시각화
+base_dir = "ntrees_50"
+
+for root, dirs, files in os.walk(base_dir):
+    for file in files:
+        if file.endswith(".json") and file.startswith("tree_"):
+            input_file = os.path.join(root, file)
+            output_file = os.path.splitext(input_file)[0]  # 확장자 제거
+
+            try:
+                with open(input_file, "r") as f:
+                    tree_data = json.load(f)
+                visualize_tree_from_dict(tree_data, output_file)
+            except Exception as e:
+                print(f"❌ Error with file {input_file}: {e}")
