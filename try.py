@@ -42,9 +42,10 @@ def cross_validation(data, k_fold):
     class_0 = data[data['label'] == 0].reset_index(drop=True)
     class_1 = data[data['label'] == 1].reset_index(drop=True)
 
+    # proceed seperate class_0(label=0 sub dataset), class_1(label=1 sub dataset) to preserve proportions
     all_data = pd.DataFrame()
     for i in range(k_fold):
-        # Slice each class proportionally into folds
+        # Slice each class proportionally into folds => satisfied disjoint condition 
         class_0_start = int(len(class_0) * i / k_fold)
         class_0_end = int(len(class_0) * (i + 1) / k_fold)
         class_1_start = int(len(class_1) * i / k_fold)
@@ -126,84 +127,130 @@ def bootstrap_sample(X, y):
     return X_sample, y_sample
 
 
-def build_tree(X, y, features):
-    # Setting default value
-    depth=0
-    max_depth=5
-    min_info_gain=1e-5
 
-    # Stopping criteria for decision tree
+def build_tree(X, y, features, depth=0):
+    ################################## Stop splitting node criteria (maximal_depth and minimal_gain are combined) ##################################
+    # depth = 0 --> check current node depth to confirm when depth reached to max_depth
+    max_depth=5 # maximal_depth
+    min_info_gain=1e-5 # minimal_gain
+
+    ### Check Stop Spliting condition
+    # unique -> check all the same class
+    # len(features) -> no features left
+    # current depth = max_depth
     if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:
         return Node(label=y.mode()[0])
 
-    # Select m random attributes (m ≈ sqrt(#features))
-    m = max(1, int(math.sqrt(len(features))))
-    selected_features = random.sample(list(features), m)
+    ### Select m random attributes
+    m = int(math.sqrt(len(features))) # m ≈ sqrt(#features)
+    selected_features = random.sample(list(features), m) # select the mth sample in features
+    # branch splitting criteria, best_gain=-1 -> if gain > best_gain(-1) => always true for first 
+    best_feature, best_gain, best_threshold = None, -1, None 
 
-    best_feature, best_gain, best_threshold = None, -1, None
 
-    for f in selected_features:
-        if X[f].dtype == 'object':
+    ################################## select features based on information gain ################################## 
+    for feature in selected_features:
+        # categorical attribute -> best_threshold : no need
+        if feature.endswith('_cat'):
             # Evaluate gain for categorical feature
-            values = X[f].unique()
-            subsets = [y[X[f] == v] for v in values]
-            gain = entropy(y) - sum((len(sub)/len(y)) * entropy(sub) for sub in subsets)
+            values = X[feature].unique() # unique values in attribute
+
+            ### information gain 구하기
+            subsets = []
+            weighted_entropy = 0
+            # try all values in feature
+            for v in values:
+                # select X(feature)=v and get the y(label) => subset_y = y[X['gender_cat'] == 'female']
+                subset_y = y[X[feature] == v]
+                # subsets = the corresponding y values for each unique value of the feature
+                subsets.append(subset_y)
+                # one value in featrues y values / all y values 
+                proportion = len(subset_y) / len(y)
+                # add all entropy from each values 
+                weighted_entropy = weighted_entropy + proportion * entropy(subset_y)
+            gain = entropy(y) - weighted_entropy
+
+            ### if this features is better than best_gain 
+            # threshold doesnt need because this is categorical attribute
+            # default best_gain=-1 -> 1st feature selected
+            # but from 2nd feature, need to compare with best feature(1st feature)
             if gain > best_gain:
-                best_feature, best_gain, best_threshold = f, gain, None
+                best_feature, best_gain, best_threshold = feature, gain, None
+        
+        # numerical attribute -> best_threshold : need
         else:
-            # Evaluate gain for numerical feature (using mean as threshold)
-            threshold = X[f].mean()
-            left_y = y[X[f] <= threshold]
-            right_y = y[X[f] > threshold]
-            if len(left_y) == 0 or len(right_y) == 0:
+            # threshold is selected as average value in features.
+            threshold = X[feature].mean()
+            # left : same or lower than average / right : higher than average
+            # X[feature] <= threshold : [True, True, False, True, True, False]
+            # y[X[features] <= threshold] : y[[True, True, False, True, True, False]] = y[(index)0,1,3,4] = [(y_value)1,1,1,0]
+            left_y = y[X[feature] <= threshold]
+            right_y = y[X[feature] > threshold]
+            
+            # after splitting, if one side is empty then skip and find another attribute
+            if len(left_y) == 0 or len(right_y) == 0:          
+                # continue : skip this loop and go to next iteration
                 continue
-            # decision tree split by information gain
-            gain = information_gain_split(left_y, right_y)
+            
+            # proportions
+            total_len = len(y)
+            left_prop = len(left_y) / total_len
+            right_prop = len(right_y) / total_len
+
+            # weighted entropy
+            weighted_entropy = left_prop * entropy(left_y) + right_prop * entropy(right_y)
+            gain = entropy(y) - weighted_entropy
+
+            # update best split if gain improves
             if gain > best_gain:
-                best_feature, best_gain, best_threshold = f, gain, threshold
+                best_feature, best_gain, best_threshold = feature, gain, threshold
 
-    if best_gain < min_info_gain or best_feature is None:
-        return Node(label=y.mode()[0])
-
+    # after for loop, save feature, threshold to Node
+    # threshold become standard value for splitting
     tree = Node(feature=best_feature, threshold=best_threshold)
 
+    ################################## build tree based on best_features, best_threshold ################################## 
+    # Categorical attribute(features)
     if best_threshold is None:
-        # Categorical split
         for value in X[best_feature].unique():
+            # get data only which column=best_feature is "value" and drop the best_feature column
             subset_X = X[X[best_feature] == value].drop(columns=[best_feature])
+            # get data only which column=best_feature is "value"
             subset_y = y[X[best_feature] == value]
-            tree.children[value] = build_tree(subset_X, subset_y, [f for f in features if f != best_feature], depth + 1, max_depth, min_info_gain)
+            ########## make subtree and connect to child node ##########
+            # new features
+            new_features = []
+            # f in features
+            for f in features:
+                if f != best_feature:
+                    new_features.append(f)
+            # excluding best_feature, create new_featrues list and operate build_tree function again
+            child_subtree = build_tree(subset_X,subset_y,new_features,depth + 1)
+            # connect to child node
+            tree.children[value] = child_subtree
+    # Numerical attribute
     else:
-        # Numerical split
         left_mask = X[best_feature] <= best_threshold
         right_mask = X[best_feature] > best_threshold
-        tree.children["<="] = build_tree(X[left_mask], y[left_mask], features, depth + 1, max_depth, min_info_gain)
-        tree.children[">"] = build_tree(X[right_mask], y[right_mask], features, depth + 1, max_depth, min_info_gain)
-
+        tree.children["<="] = build_tree(X[left_mask], y[left_mask], features, depth + 1)
+        tree.children[">"] = build_tree(X[right_mask], y[right_mask], features, depth + 1)
     return tree
 
-def tree_to_dict(node):
-    # Serialize tree to dictionary format
-    if node.label is not None:
-        return {"label": int(node.label)}
-    return {
-        "feature": node.feature,
-        "threshold": node.threshold,
-        "children": {str(k): tree_to_dict(v) for k, v in node.children.items()}
-    }
+# ===== Entropy & Tree Node Class =====
+# Compute entropy of label distribution
+# e.g., (x=sunny)-> y = [y,y,y,n,n] -> entropy calcuate
+# e.g., all y = [y,y,y,n,n,n,n,n,y,y,y,n] -> entropy calcuate
+def entropy(y):
+    # count label and change to series
+    class_counts = y.value_counts()
+    # divided by total length
+    probabilities = class_counts / len(y)
+    # entropy = sum(- prob * log2(prob))
+    return -np.sum(probabilities * np.log2(probabilities))
 
 
-def save_trees_as_json(trees, ntrees, base_dir="saved_trees"):
-    # Save all trees in the forest as JSON files
-    folder = os.path.join(base_dir, f"ntrees_{ntrees}")
-    os.makedirs(folder, exist_ok=True)
-    for i, tree in enumerate(trees, start=1):
-        tree_dict = tree_to_dict(tree)
-        with open(os.path.join(folder, f"tree_{i}.json"), "w") as f:
-            json.dump(tree_dict, f, indent=4)
-
+# Predict by majority voting from all trees in the forest
 def random_forest_predict(trees, X):
-    # Predict by majority voting from all trees in the forest
     tree_preds = np.array([predict(tree, X) for tree in trees])
     final_preds = []
     for i in range(X.shape[0]):
@@ -215,8 +262,8 @@ def random_forest_predict(trees, X):
             final_preds.append(values[np.argmax(counts)])
     return np.array(final_preds)
 
+ # Predict labels for each row in dataset using a single decision tree
 def predict(tree, X):
-    # Predict labels for each row in dataset using a single decision tree
     predictions = []
     for _, row in X.iterrows():
         node = tree
@@ -235,33 +282,34 @@ def predict(tree, X):
         predictions.append(node.label if node else None)
     return np.array(predictions)
 
+##################################### accuracy, precision, recall, f1_score ##################################### 
+# Calculate accuracy
 def accuracy(predictions, true_labels):
-    # Calculate accuracy
     predictions = np.array(predictions)
     true_labels = np.array(true_labels)
     valid = predictions != None
     return np.mean(predictions[valid] == true_labels[valid])
 
+# Calculate precision
 def precision(y_true, y_pred):
-    # Calculate precision
     tp = np.sum((y_pred == 1) & (y_true == 1))
     fp = np.sum((y_pred == 1) & (y_true == 0))
     return tp / (tp + fp) if (tp + fp) > 0 else 0.0
 
+# Calculate recall
 def recall(y_true, y_pred):
-    # Calculate recall
     tp = np.sum((y_pred == 1) & (y_true == 1))
     fn = np.sum((y_pred == 0) & (y_true == 1))
     return tp / (tp + fn) if (tp + fn) > 0 else 0.0
 
+# Calculate F1-score
 def f1_score_manual(y_true, y_pred):
-    # Calculate F1-score
     p = precision(y_true, y_pred)
     r = recall(y_true, y_pred)
     return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
+# Plot accuracy, precision, recall, and F1 score vs. number of trees
 def plot_metrics(ntrees_list, metrics, save_dir):
-    # Plot accuracy, precision, recall, and F1 score vs. number of trees
     titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
     filenames = ["accuracy.png", "precision.png", "recall.png", "f1score.png"]
     os.makedirs(save_dir, exist_ok=True)
@@ -275,27 +323,25 @@ def plot_metrics(ntrees_list, metrics, save_dir):
         plt.savefig(f"{save_dir}/{fname}")
         plt.close()
 
-# ===== Entropy & Tree Node Class =====
-def entropy(y):
-    # Compute entropy of label distribution
-    class_counts = y.value_counts()
-    probabilities = class_counts / len(y)
-    return -np.sum(probabilities * np.log2(probabilities))
+##################################### tree -> json file ##################################### 
+# Serialize tree to dictionary format
+def tree_to_dict(node):
+    if node.label is not None:
+        return {"label": int(node.label)}
+    return {
+        "feature": node.feature,
+        "threshold": node.threshold,
+        "children": {str(k): tree_to_dict(v) for k, v in node.children.items()}
+    }
 
-def information_gain_split(y_left, y_right):
-    # Compute information gain from a binary split
-    total_entropy = entropy(pd.concat([y_left, y_right]))
-    weighted_entropy = (len(y_left)/ (len(y_left) + len(y_right))) * entropy(y_left) + \
-                       (len(y_right)/ (len(y_left) + len(y_right))) * entropy(y_right)
-    return total_entropy - weighted_entropy
-
-class Node:
-    # Node in the decision tree
-    def __init__(self, feature=None, threshold=None, label=None, children=None):
-        self.feature = feature
-        self.threshold = threshold
-        self.label = label
-        self.children = children if children else {}
+# Save all trees in the forest as JSON files
+def save_trees_as_json(trees, ntrees, base_dir="saved_trees"):
+    folder = os.path.join(base_dir, f"ntrees_{ntrees}")
+    os.makedirs(folder, exist_ok=True)
+    for i, tree in enumerate(trees, start=1):
+        tree_dict = tree_to_dict(tree)
+        with open(os.path.join(folder, f"tree_{i}.json"), "w") as f:
+            json.dump(tree_dict, f, indent=4)
 
 if __name__ == "__main__":
     main()
