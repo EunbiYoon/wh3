@@ -8,15 +8,22 @@ import random
 
 # ===== Main Function =====
 def main():
+    ##### choose dataset #####
+    filename = "datasets/raisin.csv" # <<<<===== changing point 
+    base = os.path.basename(filename)     
+    basename = os.path.splitext(base)[0]
+
     # Load dataset and preprocess it
-    data = load_and_preprocess_data("raisin.csv")
+    data = load_and_preprocess_data(filename)
+    
     # Apply stratified k-fold cross-validation
     fold_data = cross_validation(data, k_fold=5)
 
     # Train and evaluate Random Forest
     ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
+    
     # Plot evaluation metrics
-    plot_metrics(ntrees_list, metrics, save_dir="raisin_result")
+    plot_metrics(basename,ntrees_list, metrics, save_dir="plots")
 
 # ===== Preprocessing =====
 def load_and_preprocess_data(filepath):
@@ -127,9 +134,30 @@ def bootstrap_sample(X, y):
     return X_sample, y_sample
 
 
+##################################### make decision tree ##################################### 
+# ===== Entropy & Tree Node Class =====
+class Node:
+    # Node in the decision tree
+    def __init__(self, feature=None, threshold=None, label=None, children=None):
+        self.feature = feature
+        self.threshold = threshold
+        self.label = label
+        self.children = children if children else {}
+
+# Compute entropy of label distribution
+# e.g., (x=sunny)-> y = [y,y,y,n,n] -> entropy calcuate
+# e.g., all y = [y,y,y,n,n,n,n,n,y,y,y,n] -> entropy calcuate
+def entropy(y):
+    # count label and change to series
+    class_counts = y.value_counts()
+    # divided by total length
+    probabilities = class_counts / len(y)
+    # entropy = sum(- prob * log2(prob))
+    return -np.sum(probabilities * np.log2(probabilities))
+
 
 def build_tree(X, y, features, depth=0):
-    ################################## Stop splitting node criteria (maximal_depth and minimal_gain are combined) ##################################
+    ####### Stop splitting node criteria (maximal_depth and minimal_gain are combined) ####### 
     # depth = 0 --> check current node depth to confirm when depth reached to max_depth
     max_depth=5 # maximal_depth
     min_info_gain=1e-5 # minimal_gain
@@ -148,7 +176,7 @@ def build_tree(X, y, features, depth=0):
     best_feature, best_gain, best_threshold = None, -1, None 
 
 
-    ################################## select features based on information gain ################################## 
+    ####### select features based on information gain ####### 
     for feature in selected_features:
         # categorical attribute -> best_threshold : no need
         if feature.endswith('_cat'):
@@ -170,12 +198,12 @@ def build_tree(X, y, features, depth=0):
                 weighted_entropy = weighted_entropy + proportion * entropy(subset_y)
             gain = entropy(y) - weighted_entropy
 
-            ### if this features is better than best_gain 
+            ###### get the best features ######
             # threshold doesnt need because this is categorical attribute
-            # default best_gain=-1 -> 1st feature selected
-            # but from 2nd feature, need to compare with best feature(1st feature)
-            if gain > best_gain:
+            # default best_gain=-1 -> 1st feature selected but from 2nd feature, need to compare with best feature(1st feature)
+            if best_gain < min_info_gain or best_feature is None:
                 best_feature, best_gain, best_threshold = feature, gain, None
+                return Node(label=y.mode()[0])
         
         # numerical attribute -> best_threshold : need
         else:
@@ -201,15 +229,23 @@ def build_tree(X, y, features, depth=0):
             weighted_entropy = left_prop * entropy(left_y) + right_prop * entropy(right_y)
             gain = entropy(y) - weighted_entropy
 
+            ###### get the best features ######
             # update best split if gain improves
             if gain > best_gain:
                 best_feature, best_gain, best_threshold = feature, gain, threshold
+
+
+    ####### before saved into Node to check stopping criteria ######
+    if best_gain < min_info_gain or best_feature is None:
+        # make leaf node and no more branching
+        return Node(label=y.mode()[0])
 
     # after for loop, save feature, threshold to Node
     # threshold become standard value for splitting
     tree = Node(feature=best_feature, threshold=best_threshold)
 
-    ################################## build tree based on best_features, best_threshold ################################## 
+
+    ####### build tree based on best_features, best_threshold ####### 
     # Categorical attribute(features)
     if best_threshold is None:
         for value in X[best_feature].unique():
@@ -228,27 +264,24 @@ def build_tree(X, y, features, depth=0):
             child_subtree = build_tree(subset_X,subset_y,new_features,depth + 1)
             # connect to child node
             tree.children[value] = child_subtree
+    
     # Numerical attribute
     else:
+        # mask : depends on each instance achieve condition
+        # mask = [False, True, False, False, False, True]
         left_mask = X[best_feature] <= best_threshold
         right_mask = X[best_feature] > best_threshold
+        
+        # make left and right branch
+        # use boolean indexing, select index(instance) which is true
         tree.children["<="] = build_tree(X[left_mask], y[left_mask], features, depth + 1)
         tree.children[">"] = build_tree(X[right_mask], y[right_mask], features, depth + 1)
+    
+    # final tree is returned by checking stopping criteria
     return tree
 
-# ===== Entropy & Tree Node Class =====
-# Compute entropy of label distribution
-# e.g., (x=sunny)-> y = [y,y,y,n,n] -> entropy calcuate
-# e.g., all y = [y,y,y,n,n,n,n,n,y,y,y,n] -> entropy calcuate
-def entropy(y):
-    # count label and change to series
-    class_counts = y.value_counts()
-    # divided by total length
-    probabilities = class_counts / len(y)
-    # entropy = sum(- prob * log2(prob))
-    return -np.sum(probabilities * np.log2(probabilities))
 
-
+##################################### make prediction ##################################### 
 # Predict by majority voting from all trees in the forest
 def random_forest_predict(trees, X):
     tree_preds = np.array([predict(tree, X) for tree in trees])
@@ -308,8 +341,8 @@ def f1_score_manual(y_true, y_pred):
     r = recall(y_true, y_pred)
     return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
-# Plot accuracy, precision, recall, and F1 score vs. number of trees
-def plot_metrics(ntrees_list, metrics, save_dir):
+##################################### plot the metrics ##################################### 
+def plot_metrics(dataset_name, ntrees_list, metrics, save_dir):
     titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
     filenames = ["accuracy.png", "precision.png", "recall.png", "f1score.png"]
     os.makedirs(save_dir, exist_ok=True)
