@@ -1,22 +1,5 @@
 [
     {
-        "label": "Digraph",
-        "importPath": "graphviz",
-        "description": "graphviz",
-        "isExtraImport": true,
-        "detail": "graphviz",
-        "documentation": {}
-    },
-    {
-        "label": "json",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "json",
-        "description": "json",
-        "detail": "json",
-        "documentation": {}
-    },
-    {
         "label": "pandas",
         "kind": 6,
         "isExtraImport": true,
@@ -53,12 +36,30 @@
         "documentation": {}
     },
     {
-        "label": "visualize_tree_from_dict",
-        "kind": 2,
-        "importPath": "saved_trees.graph",
-        "description": "saved_trees.graph",
-        "peekOfCode": "def visualize_tree_from_dict(tree_dict, output_file=\"tree\"):\n    dot = Digraph()\n    def add_nodes_edges(tree, parent=None, edge_label=\"\"):\n        node_id = str(id(tree))  # unique id for Graphviz\n        if \"label\" in tree:\n            dot.node(node_id, f\"Label: {tree['label']}\", shape=\"box\", style=\"filled\", color=\"lightblue\")\n        else:\n            dot.node(node_id, f\"Feature: {tree['feature']}\", shape=\"ellipse\", style=\"filled\", color=\"lightgreen\")\n        if parent:\n            dot.edge(parent, node_id, label=edge_label)",
-        "detail": "saved_trees.graph",
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "math",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "math",
+        "description": "math",
+        "detail": "math",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
         "documentation": {}
     },
     {
@@ -66,7 +67,7 @@
         "kind": 6,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "class Node:\n    def __init__(self, feature=None, label=None, children=None):\n        self.feature = feature\n        self.label = label\n        self.children = children if children else {}\ndef build_tree(X, y, features, depth=0, max_depth=5, min_info_gain=1e-5):\n    if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:\n        return Node(label=y.mode()[0])\n    info_gains = {f: information_gain(X, y, f) for f in features}\n    best_feature = max(info_gains, key=info_gains.get)",
+        "peekOfCode": "class Node:\n    # Node in the decision tree\n    def __init__(self, feature=None, threshold=None, label=None, children=None):\n        self.feature = feature\n        self.threshold = threshold\n        self.label = label\n        self.children = children if children else {}\n# Compute entropy of label distribution\n# e.g., (x=sunny)-> y = [y,y,y,n,n] -> entropy calcuate\n# e.g., all y = [y,y,y,n,n,n,n,n,y,y,y,n] -> entropy calcuate",
         "detail": "try",
         "documentation": {}
     },
@@ -75,7 +76,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def main():\n    data = load_and_preprocess_data(\"raisin.csv\")\n    fold_data = cross_validation(data, k_fold=5)\n    ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)\n    plot_metrics(ntrees_list, metrics, save_dir=\"raisin_result\")\n# ===== Preprocessing =====\ndef load_and_preprocess_data(filepath):\n    data = pd.read_csv(filepath)\n    data = data.rename(columns={\"class\": \"label\"})\n    for col in data.columns:",
+        "peekOfCode": "def main():\n    ##### choose dataset #####\n    filename = \"datasets/raisin.csv\" # <<<<===== changing point \n    base = os.path.basename(filename)     \n    basename = os.path.splitext(base)[0]\n    # Load dataset and preprocess it\n    data = load_and_preprocess_data(filename)\n    # Apply stratified k-fold cross-validation\n    fold_data = cross_validation(data, k_fold=5)\n    # Train and evaluate Random Forest",
         "detail": "try",
         "documentation": {}
     },
@@ -84,7 +85,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def load_and_preprocess_data(filepath):\n    data = pd.read_csv(filepath)\n    data = data.rename(columns={\"class\": \"label\"})\n    for col in data.columns:\n        if col == \"label\":\n            continue\n        elif col.endswith(\"_cat\"):\n            data[col] = data[col].astype(str)\n        elif col.endswith(\"_num\"):\n            data[col] = (data[col] > data[col].mean()).astype(int)",
+        "peekOfCode": "def load_and_preprocess_data(filepath):\n    # Load CSV and rename target column\n    data = pd.read_csv(filepath)\n    data = data.rename(columns={\"class\": \"label\"})\n    # Process each column by its suffix\n    for col in data.columns:\n        if col == \"label\":\n            continue\n        elif col.endswith(\"_cat\"):\n            data[col] = data[col].astype(str)  # Categorical feature",
         "detail": "try",
         "documentation": {}
     },
@@ -93,97 +94,16 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def cross_validation(data, k_fold):\n    class_0 = data[data['label'] == 0].reset_index(drop=True)\n    class_1 = data[data['label'] == 1].reset_index(drop=True)\n    fold_list = []\n    for i in range(k_fold):\n        class_0_start = int(len(class_0) * i / k_fold)\n        class_0_end = int(len(class_0) * (i + 1) / k_fold)\n        class_1_start = int(len(class_1) * i / k_fold)\n        class_1_end = int(len(class_1) * (i + 1) / k_fold)\n        class_0_fold = class_0.iloc[class_0_start:class_0_end]",
+        "peekOfCode": "def cross_validation(data, k_fold):\n    # Separate data by class label for stratified sampling\n    class_0 = data[data['label'] == 0].reset_index(drop=True)\n    class_1 = data[data['label'] == 1].reset_index(drop=True)\n    # proceed seperate class_0(label=0 sub dataset), class_1(label=1 sub dataset) to preserve proportions\n    all_data = pd.DataFrame()\n    for i in range(k_fold):\n        # Slice each class proportionally into folds => satisfied disjoint condition \n        class_0_start = int(len(class_0) * i / k_fold)\n        class_0_end = int(len(class_0) * (i + 1) / k_fold)",
         "detail": "try",
         "documentation": {}
     },
     {
-        "label": "entropy",
+        "label": "evaluate_random_forest",
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def entropy(y):\n    class_counts = y.value_counts()\n    probabilities = class_counts / len(y)\n    return -np.sum(probabilities * np.log2(probabilities))\ndef information_gain(X, y, feature):\n    total_entropy = entropy(y)\n    values = X[feature].unique()\n    weighted_entropy = sum(\n        (len(y[X[feature] == value]) / len(y)) * entropy(y[X[feature] == value]) for value in values\n    )",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "information_gain",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def information_gain(X, y, feature):\n    total_entropy = entropy(y)\n    values = X[feature].unique()\n    weighted_entropy = sum(\n        (len(y[X[feature] == value]) / len(y)) * entropy(y[X[feature] == value]) for value in values\n    )\n    return total_entropy - weighted_entropy\nclass Node:\n    def __init__(self, feature=None, label=None, children=None):\n        self.feature = feature",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "build_tree",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def build_tree(X, y, features, depth=0, max_depth=5, min_info_gain=1e-5):\n    if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:\n        return Node(label=y.mode()[0])\n    info_gains = {f: information_gain(X, y, f) for f in features}\n    best_feature = max(info_gains, key=info_gains.get)\n    best_gain = info_gains[best_feature]\n    if best_gain < min_info_gain:\n        return Node(label=y.mode()[0])\n    tree = Node(feature=best_feature)\n    remaining_features = [f for f in features if f != best_feature]",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "tree_to_dict",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def tree_to_dict(node):\n    if node.label is not None:\n        return {\"label\": int(node.label)}  # ⭐ int64 → int 변환\n    return {\n        \"feature\": node.feature,\n        \"children\": {str(k): tree_to_dict(v) for k, v in node.children.items()}\n    }\ndef save_trees_as_json(trees, ntrees, base_dir=\"saved_trees\"):\n    folder = os.path.join(base_dir, f\"ntrees_{ntrees}\")\n    os.makedirs(folder, exist_ok=True)",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "save_trees_as_json",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def save_trees_as_json(trees, ntrees, base_dir=\"saved_trees\"):\n    folder = os.path.join(base_dir, f\"ntrees_{ntrees}\")\n    os.makedirs(folder, exist_ok=True)\n    for i, tree in enumerate(trees, start=1):\n        tree_dict = tree_to_dict(tree)\n        with open(os.path.join(folder, f\"tree_{i}.json\"), \"w\") as f:\n            json.dump(tree_dict, f, indent=4)\ndef predict(tree, X):\n    predictions = []\n    for _, row in X.iterrows():",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "predict",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def predict(tree, X):\n    predictions = []\n    for _, row in X.iterrows():\n        node = tree\n        while node.label is None:\n            if row[node.feature] not in node.children:\n                predictions.append(None)\n                break\n            node = node.children[row[node.feature]]\n        else:",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "accuracy",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def accuracy(predictions, true_labels):\n    predictions = np.array(predictions)\n    true_labels = np.array(true_labels)\n    valid = predictions != None\n    return np.mean(predictions[valid] == true_labels[valid])\ndef precision(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fp = np.sum((y_pred == 1) & (y_true == 0))\n    return tp / (tp + fp) if (tp + fp) > 0 else 0.0\ndef recall(y_true, y_pred):",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "precision",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def precision(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fp = np.sum((y_pred == 1) & (y_true == 0))\n    return tp / (tp + fp) if (tp + fp) > 0 else 0.0\ndef recall(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fn = np.sum((y_pred == 0) & (y_true == 1))\n    return tp / (tp + fn) if (tp + fn) > 0 else 0.0\ndef f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "recall",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def recall(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fn = np.sum((y_pred == 0) & (y_true == 1))\n    return tp / (tp + fn) if (tp + fn) > 0 else 0.0\ndef f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n# ===== Random Forest Helpers =====\ndef bootstrap_sample(X, y):",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "f1_score_manual",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n# ===== Random Forest Helpers =====\ndef bootstrap_sample(X, y):\n    idxs = np.random.choice(len(X), size=len(X), replace=True)\n    return X.iloc[idxs].reset_index(drop=True), y.iloc[idxs].reset_index(drop=True)\ndef random_forest_predict(trees, X):\n    tree_preds = np.array([predict(tree, X) for tree in trees])",
+        "peekOfCode": "def evaluate_random_forest(fold_data, k_fold):\n    ntrees_list = [1, 5, 10, 20, 30, 40, 50]\n    acc_list, prec_list, rec_list, f1_list = [], [], [], []\n    # operate in all ntrees\n    for ntrees in ntrees_list:\n        print(f\"\\nEvaluating Random Forest with {ntrees} trees\")\n        accs, precisions, recalls, f1s = [], [], [], []\n        # execute cross_validation\n        for i in range(k_fold):\n            # Split fold into training and testing",
         "detail": "try",
         "documentation": {}
     },
@@ -192,7 +112,25 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def bootstrap_sample(X, y):\n    idxs = np.random.choice(len(X), size=len(X), replace=True)\n    return X.iloc[idxs].reset_index(drop=True), y.iloc[idxs].reset_index(drop=True)\ndef random_forest_predict(trees, X):\n    tree_preds = np.array([predict(tree, X) for tree in trees])\n    final_preds = []\n    for i in range(X.shape[0]):\n        row_preds = tree_preds[:, i]\n        values, counts = np.unique(row_preds[row_preds != None], return_counts=True)\n        if len(counts) == 0:",
+        "peekOfCode": "def bootstrap_sample(X, y):\n    # random select on index\n    idxs = np.random.choice(len(X), size=len(X), replace=True) # replacement = True\n    # get the selected index in X,y\n    X_sample = X.iloc[idxs].reset_index(drop=True)\n    y_sample = y.iloc[idxs].reset_index(drop=True)\n    # return same as input\n    return X_sample, y_sample\n##################################### make decision tree ##################################### \n# ===== Entropy & Tree Node Class =====",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "entropy",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def entropy(y):\n    # count label and change to series\n    class_counts = y.value_counts()\n    # divided by total length\n    probabilities = class_counts / len(y)\n    # entropy = sum(- prob * log2(prob))\n    return -np.sum(probabilities * np.log2(probabilities))\ndef build_tree(X, y, features, depth=0):\n    ####### Stop splitting node criteria (maximal_depth and minimal_gain are combined) ####### \n    # depth = 0 --> check current node depth to confirm when depth reached to max_depth",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "build_tree",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def build_tree(X, y, features, depth=0):\n    ####### Stop splitting node criteria (maximal_depth and minimal_gain are combined) ####### \n    # depth = 0 --> check current node depth to confirm when depth reached to max_depth\n    max_depth=5 # maximal_depth\n    min_info_gain=1e-5 # minimal_gain\n    ### Check Stop Spliting condition ===> maximal_depth\n    # unique -> check all the same class\n    # len(features) -> no features left\n    # current depth = max_depth\n    if len(y.unique()) == 1 or len(features) == 0 or depth == max_depth:",
         "detail": "try",
         "documentation": {}
     },
@@ -206,11 +144,47 @@
         "documentation": {}
     },
     {
-        "label": "evaluate_random_forest",
+        "label": "predict",
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def evaluate_random_forest(fold_data, k_fold):\n    ntrees_list = [1, 5, 10, 20, 30, 40, 50]\n    acc_list, prec_list, rec_list, f1_list = [], [], [], []\n    for ntrees in ntrees_list:\n        print(f\"\\n🌲 Evaluating Random Forest with {ntrees} trees\")\n        accs, precisions, recalls, f1s = [], [], [], []\n        for i in range(k_fold):\n            test_data = fold_data[fold_data[\"k_fold\"] == i]\n            train_data = fold_data[fold_data[\"k_fold\"] != i]\n            X_train = train_data.drop(columns=[\"label\", \"k_fold\"])",
+        "peekOfCode": "def predict(tree, X):\n    predictions = []\n    for _, row in X.iterrows():\n        node = tree\n        while node.label is None:\n            val = row[node.feature]\n            if node.threshold is not None:\n                if val <= node.threshold:\n                    node = node.children.get(\"<=\")\n                else:",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "accuracy",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def accuracy(predictions, true_labels):\n    predictions = np.array(predictions)\n    true_labels = np.array(true_labels)\n    valid = predictions != None\n    return np.mean(predictions[valid] == true_labels[valid])\n# Calculate precision\ndef precision(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fp = np.sum((y_pred == 1) & (y_true == 0))\n    return tp / (tp + fp) if (tp + fp) > 0 else 0.0",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "precision",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def precision(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fp = np.sum((y_pred == 1) & (y_true == 0))\n    return tp / (tp + fp) if (tp + fp) > 0 else 0.0\n# Calculate recall\ndef recall(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fn = np.sum((y_pred == 0) & (y_true == 1))\n    return tp / (tp + fn) if (tp + fn) > 0 else 0.0\n# Calculate F1-score",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "recall",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def recall(y_true, y_pred):\n    tp = np.sum((y_pred == 1) & (y_true == 1))\n    fn = np.sum((y_pred == 0) & (y_true == 1))\n    return tp / (tp + fn) if (tp + fn) > 0 else 0.0\n# Calculate F1-score\ndef f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n##################################### plot the metrics ##################################### ",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "f1_score_manual",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n##################################### plot the metrics ##################################### \ndef plot_metrics(dataset_name, ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n    os.makedirs(save_dir, exist_ok=True)\n    for metric, title, fname in zip(metrics, titles, filenames):",
         "detail": "try",
         "documentation": {}
     },
@@ -219,7 +193,25 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def plot_metrics(ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n    for metric, title, fname in zip(metrics, titles, filenames):\n        plt.figure(figsize=(6, 4))\n        plt.plot(ntrees_list, metric, marker='o')\n        plt.title(title)\n        plt.xlabel(\"ntrees\")\n        plt.savefig(f\"{save_dir}/{fname}\")\nif __name__ == \"__main__\":",
+        "peekOfCode": "def plot_metrics(dataset_name, ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n    os.makedirs(save_dir, exist_ok=True)\n    for metric, title, fname in zip(metrics, titles, filenames):\n        plt.figure(figsize=(6, 4))\n        plt.plot(ntrees_list, metric, marker='o')\n        plt.title(title)\n        plt.xlabel(\"ntrees\")\n        plt.ylabel(title)",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "tree_to_dict",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def tree_to_dict(node):\n    if node.label is not None:\n        return {\"label\": int(node.label)}\n    return {\n        \"feature\": node.feature,\n        \"threshold\": node.threshold,\n        \"children\": {str(k): tree_to_dict(v) for k, v in node.children.items()}\n    }\n# Save all trees in the forest as JSON files\ndef save_trees_as_json(trees, ntrees, base_dir=\"saved_trees\"):",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "save_trees_as_json",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def save_trees_as_json(trees, ntrees, base_dir=\"saved_trees\"):\n    folder = os.path.join(base_dir, f\"ntrees_{ntrees}\")\n    os.makedirs(folder, exist_ok=True)\n    for i, tree in enumerate(trees, start=1):\n        tree_dict = tree_to_dict(tree)\n        with open(os.path.join(folder, f\"tree_{i}.json\"), \"w\") as f:\n            json.dump(tree_dict, f, indent=4)\nif __name__ == \"__main__\":\n    main()",
         "detail": "try",
         "documentation": {}
     }

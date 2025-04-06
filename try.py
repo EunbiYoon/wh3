@@ -23,7 +23,7 @@ def main():
     ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
     
     # Plot evaluation metrics
-    plot_metrics(basename,ntrees_list, metrics, save_dir="plots")
+    plot_metrics(basename, ntrees_list, metrics, save_dir="plots")
 
 # ===== Preprocessing =====
 def load_and_preprocess_data(filepath):
@@ -162,7 +162,7 @@ def build_tree(X, y, features, depth=0):
     max_depth=5 # maximal_depth
     min_info_gain=1e-5 # minimal_gain
 
-    ### Check Stop Spliting condition
+    ### Check Stop Spliting condition ===> maximal_depth
     # unique -> check all the same class
     # len(features) -> no features left
     # current depth = max_depth
@@ -201,10 +201,9 @@ def build_tree(X, y, features, depth=0):
             ###### get the best features ######
             # threshold doesnt need because this is categorical attribute
             # default best_gain=-1 -> 1st feature selected but from 2nd feature, need to compare with best feature(1st feature)
-            if best_gain < min_info_gain or best_feature is None:
+            if gain > best_gain:
                 best_feature, best_gain, best_threshold = feature, gain, None
-                return Node(label=y.mode()[0])
-        
+
         # numerical attribute -> best_threshold : need
         else:
             # threshold is selected as average value in features.
@@ -235,8 +234,8 @@ def build_tree(X, y, features, depth=0):
                 best_feature, best_gain, best_threshold = feature, gain, threshold
 
 
-    ####### before saved into Node to check stopping criteria ######
-    if best_gain < min_info_gain or best_feature is None:
+    ####### before saved into Node to check stopping criteria ====> minial_gain
+    if best_gain < min_info_gain or best_feature is None: 
         # make leaf node and no more branching
         return Node(label=y.mode()[0])
 
@@ -353,7 +352,7 @@ def plot_metrics(dataset_name, ntrees_list, metrics, save_dir):
         plt.xlabel("ntrees")
         plt.ylabel(title)
         plt.grid(True)
-        plt.savefig(f"{save_dir}/{fname}")
+        plt.savefig(f"{save_dir}/{dataset_name}_{fname}")
         plt.close()
 
 ##################################### tree -> json file ##################################### 
