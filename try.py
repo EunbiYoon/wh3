@@ -80,26 +80,31 @@ def evaluate_random_forest(fold_data, k_fold):
         # execute cross_validation
         for i in range(k_fold):
             # Split fold into training and testing
-            test_data = fold_data[fold_data["k_fold"] == i]
-            train_data = fold_data[fold_data["k_fold"] != i]
+            test_data = fold_data[fold_data["k_fold"] == i] # test = select k_fold data
+            train_data = fold_data[fold_data["k_fold"] != i] # train = select all data but not k_fold dasta
 
             # Separate features(attribute) and labels -> boostrap
-            X_train = train_data.drop(columns=["label", "k_fold"])
-            y_train = train_data["label"]
-            X_test = test_data.drop(columns=["label", "k_fold"])
-            y_test = test_data["label"]
+            X_train = train_data.drop(columns=["label", "k_fold"]) # get only attribute
+            y_train = train_data["label"] # get only label
+            X_test = test_data.drop(columns=["label", "k_fold"]) # get only attribute
+            y_test = test_data["label"] # get only label
 
             # Train Random Forest
             trees = []
-            for _ in range(ntrees):
-                # sampling boostrap data
+            # repeat by tree count
+            for index in range(ntrees): 
+                # sampling bootstrap for train data
                 X_sample, y_sample = bootstrap_sample(X_train, y_train)
+                # make tree with bootstrap data
                 tree = build_tree(X_sample, y_sample, X_train.columns)
+                # add tree in list of trees
                 trees.append(tree)
 
             # Save trees and make predictions
-            save_trees_as_json(trees, ntrees)
             predictions = random_forest_predict(trees, X_test)
+
+            # Save tree as json format to check later
+            save_trees_as_json(trees, ntrees)
 
             # Filter valid predictions
             mask = predictions != None
@@ -111,16 +116,27 @@ def evaluate_random_forest(fold_data, k_fold):
             precisions.append(precision(y_true_valid, y_pred_valid))
             recalls.append(recall(y_true_valid, y_pred_valid))
             f1s.append(f1_score_manual(y_true_valid, y_pred_valid))
-
             print(f"[Fold {i}] Acc: {accs[-1]:.4f}, Precision: {precisions[-1]:.4f}, Recall: {recalls[-1]:.4f}, F1: {f1s[-1]:.4f}")
 
+        # make result as list
         acc_list.append(np.mean(accs))
         prec_list.append(np.mean(precisions))
         rec_list.append(np.mean(recalls))
         f1_list.append(np.mean(f1s))
-
         print(f"Average Results for ntrees={ntrees} => Acc: {acc_list[-1]:.4f}, Prec: {prec_list[-1]:.4f}, Rec: {rec_list[-1]:.4f}, F1: {f1_list[-1]:.4f}")
 
+        # make result as dataframe
+        # make result as dataframe
+        result = pd.DataFrame({
+            f"ntrees={nt}": [acc, prec, rec, f1]
+            for nt, acc, prec, rec, f1 in zip(ntrees_list, acc_list, prec_list, rec_list, f1_list)
+        }, index=["Accuracy", "Precision", "Recall", "F1Score"])
+
+        # Add 'Average' column
+        result["Average"] = result.mean(axis=1)
+
+    # Save to Excel
+    result.to_excel("33_transposed.xlsx")
     return ntrees_list, [acc_list, prec_list, rec_list, f1_list]
 
 # Draw bootstrap sample from training data 
@@ -281,11 +297,14 @@ def build_tree(X, y, features, depth=0):
 
 
 ##################################### make prediction ##################################### 
-# Predict by majority voting from all trees in the forest
-def random_forest_predict(trees, X):
-    tree_preds = np.array([predict(tree, X) for tree in trees])
+# Predict by "majority voting" from all trees in the forest
+def random_forest_predict(trees, X_test):
+    tree_preds = np.array([predict(tree, X_test) for tree in trees])
+    sample_count=X_test.shape[0]
+    print("trees_pred")
+    print(tree_preds.shape)
     final_preds = []
-    for i in range(X.shape[0]):
+    for i in range(sample_count):
         row_preds = tree_preds[:, i]
         values, counts = np.unique(row_preds[row_preds != None], return_counts=True)
         if len(counts) == 0:
@@ -294,24 +313,46 @@ def random_forest_predict(trees, X):
             final_preds.append(values[np.argmax(counts)])
     return np.array(final_preds)
 
- # Predict labels for each row in dataset using a single decision tree
-def predict(tree, X):
+# Predict labels for each row in dataset using a single decision tree
+def predict(tree, X_test):
+    # gather all the prediction results
     predictions = []
-    for _, row in X.iterrows():
+
+    # get index(not using), row(samples) from itterows
+    for index, row in X_test.iterrows():
+        # initialize the node = tree
+        # each sample starts to search from root of tree
         node = tree
+
+        # repeat until reaching out to the leaf node
         while node.label is None:
+            # get the current node feature's value
             val = row[node.feature]
-            if node.threshold is not None:
-                if val <= node.threshold:
-                    node = node.children.get("<=")
+
+            # if "categorical" attribute
+            if node.threshold is None:
+                if val in node.children:
+                    node = node.children[val]
                 else:
-                    node = node.children.get(">")
-            else:
-                if val not in node.children:
                     node = None
                     break
-                node = node.children[val]
-        predictions.append(node.label if node else None)
+
+            # if "numerical" attribute
+            else:
+                if val <= node.threshold:
+                    # move to left child node
+                    node = node.children.get("<=")
+                else:
+                    # move to right child node
+                    node = node.children.get(">")
+        
+        # if node is not None -> add to prediction
+        if node is not None:
+            predictions.append(node.label)
+        else:
+            predictions.append(None)
+            
+    # return prediction as array
     return np.array(predictions)
 
 ##################################### accuracy, precision, recall, f1_score ##################################### 
