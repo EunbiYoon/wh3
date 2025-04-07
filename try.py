@@ -144,8 +144,6 @@ def evaluate_random_forest(fold_data, k_fold, basename):
             for nt, acc, prec, rec, f1 in zip(ntrees_list, acc_list, prec_list, rec_list, f1_list)
         }, index=["Accuracy", "Precision", "Recall", "F1Score"])
 
-        # Add 'Average' column
-        result["Average"] = result.mean(axis=1)
 
     # Save to Excel
     result.to_excel(f"result/{basename}.xlsx")
@@ -374,7 +372,7 @@ def predict(tree, X_test):
         if node is not None: # final prediction
             predictions.append(node.label)
         else:
-            predictions.append(None)
+            predictions.append(None) # when nothings to belong 
             
     # return prediction as array
     return np.array(predictions)
