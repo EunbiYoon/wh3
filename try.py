@@ -20,7 +20,7 @@ def main():
     fold_data = cross_validation(data, k_fold=5)
 
     # Train and evaluate Random Forest
-    ntrees_list, metrics = evaluate_random_forest(fold_data, k_fold=5)
+    ntrees_list, metrics = evaluate_random_forest(fold_data, 5, basename)
     
     # Plot evaluation metrics
     plot_metrics(basename, ntrees_list, metrics, save_dir="plots")
@@ -46,8 +46,8 @@ def load_and_preprocess_data(filepath):
 # ===== Cross-validation =====
 def cross_validation(data, k_fold):
     # Separate data by class label for stratified sampling
-    class_0 = data[data['label'] == 0].reset_index(drop=True)
-    class_1 = data[data['label'] == 1].reset_index(drop=True)
+    class_0 = data[data['label'] == 0].sample(frac=1).reset_index(drop=True) # sampling with fraction=100%
+    class_1 = data[data['label'] == 1].sample(frac=1).reset_index(drop=True) # sampling with fraction=100%
 
     # proceed seperate class_0(label=0 sub dataset), class_1(label=1 sub dataset) to preserve proportions
     all_data = pd.DataFrame()
@@ -67,8 +67,20 @@ def cross_validation(data, k_fold):
         all_data = pd.concat([all_data, fold_data], ignore_index=True)
     return all_data
 
+
+# Draw bootstrap sample from training data 
+def bootstrap_sample(X, y):
+    # random select on index
+    idxs = np.random.choice(len(X), size=len(X), replace=True) # replacement = True
+    # get the selected index in X,y
+    X_sample = X.iloc[idxs].reset_index(drop=True)
+    y_sample = y.iloc[idxs].reset_index(drop=True)
+    # return same as input
+    return X_sample, y_sample
+
+
 # ===== Evaluation & Plotting =====
-def evaluate_random_forest(fold_data, k_fold):
+def evaluate_random_forest(fold_data, k_fold, basename):
     ntrees_list = [1, 5, 10, 20, 30, 40, 50]
     acc_list, prec_list, rec_list, f1_list = [], [], [], []
 
@@ -103,7 +115,7 @@ def evaluate_random_forest(fold_data, k_fold):
             # Save trees and make predictions
             predictions = random_forest_predict(trees, X_test)
 
-            # Save tree as json format to check later
+            # Save tree as json format to check later (tree built based on training data)
             save_trees_as_json(trees, ntrees)
 
             # Filter valid predictions
@@ -136,18 +148,9 @@ def evaluate_random_forest(fold_data, k_fold):
         result["Average"] = result.mean(axis=1)
 
     # Save to Excel
-    result.to_excel("33_transposed.xlsx")
+    result.to_excel(f"result/{basename}.xlsx")
     return ntrees_list, [acc_list, prec_list, rec_list, f1_list]
 
-# Draw bootstrap sample from training data 
-def bootstrap_sample(X, y):
-    # random select on index
-    idxs = np.random.choice(len(X), size=len(X), replace=True) # replacement = True
-    # get the selected index in X,y
-    X_sample = X.iloc[idxs].reset_index(drop=True)
-    y_sample = y.iloc[idxs].reset_index(drop=True)
-    # return same as input
-    return X_sample, y_sample
 
 
 ##################################### make decision tree ##################################### 
@@ -231,8 +234,7 @@ def build_tree(X, y, features, depth=0):
             
             # after splitting, if one side is empty then skip and find another attribute
             if len(left_y) == 0 or len(right_y) == 0:          
-                # continue : skip this loop and go to next iteration
-                continue
+                return Node(label=y.mode()[0])  # stop split and make current node leaf
             
             # proportions
             total_len = len(y)

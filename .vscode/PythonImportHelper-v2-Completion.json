@@ -129,16 +129,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def cross_validation(data, k_fold):\n    # Separate data by class label for stratified sampling\n    class_0 = data[data['label'] == 0].reset_index(drop=True)\n    class_1 = data[data['label'] == 1].reset_index(drop=True)\n    # proceed seperate class_0(label=0 sub dataset), class_1(label=1 sub dataset) to preserve proportions\n    all_data = pd.DataFrame()\n    for i in range(k_fold):\n        # Slice each class proportionally into folds => satisfied disjoint condition \n        class_0_start = int(len(class_0) * i / k_fold)\n        class_0_end = int(len(class_0) * (i + 1) / k_fold)",
-        "detail": "try",
-        "documentation": {}
-    },
-    {
-        "label": "evaluate_random_forest",
-        "kind": 2,
-        "importPath": "try",
-        "description": "try",
-        "peekOfCode": "def evaluate_random_forest(fold_data, k_fold):\n    ntrees_list = [1, 5, 10, 20, 30, 40, 50]\n    acc_list, prec_list, rec_list, f1_list = [], [], [], []\n    # operate in all ntrees\n    for ntrees in ntrees_list:\n        print(f\"\\nEvaluating Random Forest with {ntrees} trees\")\n        accs, precisions, recalls, f1s = [], [], [], []\n        # execute cross_validation\n        for i in range(k_fold):\n            # Split fold into training and testing",
+        "peekOfCode": "def cross_validation(data, k_fold):\n    # Separate data by class label for stratified sampling\n    class_0 = data[data['label'] == 0].sample(frac=1).reset_index(drop=True) # sampling with fraction=100%\n    class_1 = data[data['label'] == 1].sample(frac=1).reset_index(drop=True) # sampling with fraction=100%\n    # proceed seperate class_0(label=0 sub dataset), class_1(label=1 sub dataset) to preserve proportions\n    all_data = pd.DataFrame()\n    for i in range(k_fold):\n        # Slice each class proportionally into folds => satisfied disjoint condition \n        class_0_start = int(len(class_0) * i / k_fold)\n        class_0_end = int(len(class_0) * (i + 1) / k_fold)",
         "detail": "try",
         "documentation": {}
     },
@@ -147,7 +138,16 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def bootstrap_sample(X, y):\n    # random select on index\n    idxs = np.random.choice(len(X), size=len(X), replace=True) # replacement = True\n    # get the selected index in X,y\n    X_sample = X.iloc[idxs].reset_index(drop=True)\n    y_sample = y.iloc[idxs].reset_index(drop=True)\n    # return same as input\n    return X_sample, y_sample\n##################################### make decision tree ##################################### \n# ===== Entropy & Tree Node Class =====",
+        "peekOfCode": "def bootstrap_sample(X, y):\n    # random select on index\n    idxs = np.random.choice(len(X), size=len(X), replace=True) # replacement = True\n    # get the selected index in X,y\n    X_sample = X.iloc[idxs].reset_index(drop=True)\n    y_sample = y.iloc[idxs].reset_index(drop=True)\n    # return same as input\n    return X_sample, y_sample\n# ===== Evaluation & Plotting =====\ndef evaluate_random_forest(fold_data, k_fold, basename):",
+        "detail": "try",
+        "documentation": {}
+    },
+    {
+        "label": "evaluate_random_forest",
+        "kind": 2,
+        "importPath": "try",
+        "description": "try",
+        "peekOfCode": "def evaluate_random_forest(fold_data, k_fold, basename):\n    ntrees_list = [1, 5, 10, 20, 30, 40, 50]\n    acc_list, prec_list, rec_list, f1_list = [], [], [], []\n    # operate in all ntrees\n    for ntrees in ntrees_list:\n        print(f\"\\nEvaluating Random Forest with {ntrees} trees\")\n        accs, precisions, recalls, f1s = [], [], [], []\n        # execute cross_validation\n        for i in range(k_fold):\n            # Split fold into training and testing",
         "detail": "try",
         "documentation": {}
     },
