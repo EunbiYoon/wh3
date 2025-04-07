@@ -9,7 +9,7 @@ import random
 # ===== Main Function =====
 def main():
     ##### choose dataset #####
-    filename = "datasets/raisin.csv" # <<<<===== changing point 
+    filename = "datasets/loan.csv" # <<<<===== changing point 
     base = os.path.basename(filename)     
     basename = os.path.splitext(base)[0]
 
@@ -341,19 +341,42 @@ def f1_score_manual(y_true, y_pred):
     return 2 * p * r / (p + r) if (p + r) > 0 else 0.0
 
 ##################################### plot the metrics ##################################### 
-def plot_metrics(dataset_name, ntrees_list, metrics, save_dir):
+# def plot_metrics(basename, ntrees_list, metrics, save_dir):
+#     titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
+#     filenames = ["accuracy.png", "precision.png", "recall.png", "f1score.png"]
+#     os.makedirs(save_dir, exist_ok=True)
+#     for metric, title, fname in zip(metrics, titles, filenames):
+#         plt.figure(figsize=(6, 4))
+#         plt.plot(ntrees_list, metric, marker='o')
+#         plt.title(f"Dataset : {basename.capitalize()} / Metrics : "+title)
+#         plt.xlabel("ntrees")
+#         plt.ylabel(title)
+#         plt.grid(True)
+#         plt.savefig(f"{save_dir}/{basename}_{fname}")
+#         plt.close()
+
+
+def plot_metrics(basename, ntrees_list, metrics, save_dir):
     titles = ["Accuracy", "Precision", "Recall", "F1 Score"]
-    filenames = ["accuracy.png", "precision.png", "recall.png", "f1score.png"]
+    
     os.makedirs(save_dir, exist_ok=True)
-    for metric, title, fname in zip(metrics, titles, filenames):
-        plt.figure(figsize=(6, 4))
+    
+    plt.figure(figsize=(12, 10))  # 전체 크기 설정 (2행 2열 서브플롯)
+    
+    for i, (metric, title) in enumerate(zip(metrics, titles), 1):
+        plt.subplot(2, 2, i)  # 2행 2열 중 i번째 subplot
         plt.plot(ntrees_list, metric, marker='o')
         plt.title(title)
         plt.xlabel("ntrees")
-        plt.ylabel(title)
         plt.grid(True)
-        plt.savefig(f"{save_dir}/{dataset_name}_{fname}")
-        plt.close()
+    
+    # 제목 대문자화 및 폰트 크기 17로 설정
+    suptitle_text = f"Dataset: {basename.capitalize()}"
+    plt.suptitle(suptitle_text, fontsize=20)
+    
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # 제목과 서브플롯 간 간격 조정
+    plt.savefig(f"{save_dir}/{basename}.png")
+    plt.close()
 
 ##################################### tree -> json file ##################################### 
 # Serialize tree to dictionary format
