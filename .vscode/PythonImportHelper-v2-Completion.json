@@ -1,5 +1,31 @@
 [
     {
+        "label": "Digraph",
+        "importPath": "graphviz",
+        "description": "graphviz",
+        "isExtraImport": true,
+        "detail": "graphviz",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "os",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "os",
+        "description": "os",
+        "detail": "os",
+        "documentation": {}
+    },
+    {
         "label": "pandas",
         "kind": 6,
         "isExtraImport": true,
@@ -27,24 +53,6 @@
         "documentation": {}
     },
     {
-        "label": "os",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "os",
-        "description": "os",
-        "detail": "os",
-        "documentation": {}
-    },
-    {
-        "label": "json",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "json",
-        "description": "json",
-        "detail": "json",
-        "documentation": {}
-    },
-    {
         "label": "math",
         "kind": 6,
         "isExtraImport": true,
@@ -63,6 +71,33 @@
         "documentation": {}
     },
     {
+        "label": "visualize_tree_from_dict",
+        "kind": 2,
+        "importPath": "saved_trees.tree",
+        "description": "saved_trees.tree",
+        "peekOfCode": "def visualize_tree_from_dict(tree_dict, output_file=\"tree\"):\n    dot = Digraph()\n    def add_nodes_edges(tree, parent=None, edge_label=\"\"):\n        node_id = str(id(tree))  # unique id for Graphviz\n        if \"label\" in tree:\n            dot.node(node_id, f\"Label: {tree['label']}\", shape=\"box\", style=\"filled\", color=\"lightblue\")\n        else:\n            dot.node(node_id, f\"Feature: {tree['feature']}\", shape=\"ellipse\", style=\"filled\", color=\"lightgreen\")\n        if parent:\n            dot.edge(parent, node_id, label=edge_label)",
+        "detail": "saved_trees.tree",
+        "documentation": {}
+    },
+    {
+        "label": "count_all_files",
+        "kind": 2,
+        "importPath": "saved_trees.tree",
+        "description": "saved_trees.tree",
+        "peekOfCode": "def count_all_files(directory):\n    total_files = 0\n    for root, dirs, files in os.walk(directory):\n        total_files += len(files)\n    return total_files\n# 🌀 모든 json 파일을 하나씩 input_file로 넣어 시각화\nbase_dir = \"ntrees_50\"\nfor root, dirs, files in os.walk(base_dir):\n    for file in files:\n        if file.endswith(\".json\") and file.startswith(\"tree_\"):",
+        "detail": "saved_trees.tree",
+        "documentation": {}
+    },
+    {
+        "label": "base_dir",
+        "kind": 5,
+        "importPath": "saved_trees.tree",
+        "description": "saved_trees.tree",
+        "peekOfCode": "base_dir = \"ntrees_50\"\nfor root, dirs, files in os.walk(base_dir):\n    for file in files:\n        if file.endswith(\".json\") and file.startswith(\"tree_\"):\n            input_file = os.path.join(root, file)\n            output_file = os.path.splitext(input_file)[0]  # 확장자 제거\n            try:\n                with open(input_file, \"r\") as f:\n                    tree_data = json.load(f)\n                visualize_tree_from_dict(tree_data, output_file)",
+        "detail": "saved_trees.tree",
+        "documentation": {}
+    },
+    {
         "label": "Node",
         "kind": 6,
         "importPath": "try",
@@ -76,7 +111,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def main():\n    ##### choose dataset #####\n    filename = \"datasets/raisin.csv\" # <<<<===== changing point \n    base = os.path.basename(filename)     \n    basename = os.path.splitext(base)[0]\n    # Load dataset and preprocess it\n    data = load_and_preprocess_data(filename)\n    # Apply stratified k-fold cross-validation\n    fold_data = cross_validation(data, k_fold=5)\n    # Train and evaluate Random Forest",
+        "peekOfCode": "def main():\n    ##### choose dataset #####\n    filename = \"datasets/loan.csv\" # <<<<===== changing point \n    base = os.path.basename(filename)     \n    basename = os.path.splitext(base)[0]\n    # Load dataset and preprocess it\n    data = load_and_preprocess_data(filename)\n    # Apply stratified k-fold cross-validation\n    fold_data = cross_validation(data, k_fold=5)\n    # Train and evaluate Random Forest",
         "detail": "try",
         "documentation": {}
     },
@@ -139,7 +174,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def random_forest_predict(trees, X):\n    tree_preds = np.array([predict(tree, X) for tree in trees])\n    final_preds = []\n    for i in range(X.shape[0]):\n        row_preds = tree_preds[:, i]\n        values, counts = np.unique(row_preds[row_preds != None], return_counts=True)\n        if len(counts) == 0:\n            final_preds.append(None)\n        else:\n            final_preds.append(values[np.argmax(counts)])",
+        "peekOfCode": "def random_forest_predict(trees, X_test):\n    # Collect predictions from all trees (shape: [num_trees, num_X_test_samples])\n    # k-fold function result => test dataset fixed\n    # test sample : 3, tree: 4 => [[1,0,0],[1,1,1],[0,1,1],[1,1,1]]\n    tree_preds = np.array([predict(tree, X_test) for tree in trees])\n    # Total number of test samples\n    test_all = X_test.shape[0]  \n    # List to store final predictions after majority voting\n    final_preds = [] \n    # Iterate over each sample",
         "detail": "try",
         "documentation": {}
     },
@@ -148,7 +183,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def predict(tree, X):\n    predictions = []\n    for _, row in X.iterrows():\n        node = tree\n        while node.label is None:\n            val = row[node.feature]\n            if node.threshold is not None:\n                if val <= node.threshold:\n                    node = node.children.get(\"<=\")\n                else:",
+        "peekOfCode": "def predict(tree, X_test):\n    # gather all the prediction results\n    predictions = []\n    ##### repeat X_test counts #####\n    # get index(not using), row(samples) from itterows\n    for index, row in X_test.iterrows(): # iterate row by row\n        # initialize the node = tree\n        # each sample starts to search from root of tree\n        node = tree\n        # repeat until reaching out to the leaf node (label exist -> leaf node)",
         "detail": "try",
         "documentation": {}
     },
@@ -184,7 +219,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n##################################### plot the metrics ##################################### \ndef plot_metrics(dataset_name, ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n    os.makedirs(save_dir, exist_ok=True)\n    for metric, title, fname in zip(metrics, titles, filenames):",
+        "peekOfCode": "def f1_score_manual(y_true, y_pred):\n    p = precision(y_true, y_pred)\n    r = recall(y_true, y_pred)\n    return 2 * p * r / (p + r) if (p + r) > 0 else 0.0\n##################################### plot the metrics ##################################### \n# def plot_metrics(basename, ntrees_list, metrics, save_dir):\n#     titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n#     filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n#     os.makedirs(save_dir, exist_ok=True)\n#     for metric, title, fname in zip(metrics, titles, filenames):",
         "detail": "try",
         "documentation": {}
     },
@@ -193,7 +228,7 @@
         "kind": 2,
         "importPath": "try",
         "description": "try",
-        "peekOfCode": "def plot_metrics(dataset_name, ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    filenames = [\"accuracy.png\", \"precision.png\", \"recall.png\", \"f1score.png\"]\n    os.makedirs(save_dir, exist_ok=True)\n    for metric, title, fname in zip(metrics, titles, filenames):\n        plt.figure(figsize=(6, 4))\n        plt.plot(ntrees_list, metric, marker='o')\n        plt.title(title)\n        plt.xlabel(\"ntrees\")\n        plt.ylabel(title)",
+        "peekOfCode": "def plot_metrics(basename, ntrees_list, metrics, save_dir):\n    titles = [\"Accuracy\", \"Precision\", \"Recall\", \"F1 Score\"]\n    os.makedirs(save_dir, exist_ok=True)\n    plt.figure(figsize=(12, 10))  # 전체 크기 설정 (2행 2열 서브플롯)\n    for i, (metric, title) in enumerate(zip(metrics, titles), 1):\n        plt.subplot(2, 2, i)  # 2행 2열 중 i번째 subplot\n        plt.plot(ntrees_list, metric, marker='o')\n        plt.title(title)\n        plt.xlabel(\"ntrees\")\n        plt.grid(True)",
         "detail": "try",
         "documentation": {}
     },

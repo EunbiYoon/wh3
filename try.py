@@ -81,22 +81,22 @@ def evaluate_random_forest(fold_data, k_fold):
         for i in range(k_fold):
             # Split fold into training and testing
             test_data = fold_data[fold_data["k_fold"] == i] # test = select k_fold data
-            train_data = fold_data[fold_data["k_fold"] != i] # train = select all data but not k_fold dasta
+            train_data = fold_data[fold_data["k_fold"] != i] # train = select all data but not k_fold data
 
-            # Separate features(attribute) and labels -> boostrap
+            # Separate features(attribute) and labels for boostrap
             X_train = train_data.drop(columns=["label", "k_fold"]) # get only attribute
             y_train = train_data["label"] # get only label
             X_test = test_data.drop(columns=["label", "k_fold"]) # get only attribute
             y_test = test_data["label"] # get only label
-
+        
             # Train Random Forest
             trees = []
-            # repeat by tree count
+            # repeat by tree count(ntrees)
             for index in range(ntrees): 
                 # sampling bootstrap for train data
-                X_sample, y_sample = bootstrap_sample(X_train, y_train)
+                X_sample, y_sample = bootstrap_sample(X_train, y_train) ###### only train data, boostrap datasets by sampling (with replacement)
                 # make tree with bootstrap data
-                tree = build_tree(X_sample, y_sample, X_train.columns)
+                tree = build_tree(X_sample, y_sample, X_train.columns) #### each boostrap makes each tree
                 # add tree in list of trees
                 trees.append(tree)
 
@@ -187,19 +187,17 @@ def build_tree(X, y, features, depth=0):
 
     ### Select m random attributes
     m = int(math.sqrt(len(features))) # m ≈ sqrt(#features)
-    selected_features = random.sample(list(features), m) # select the mth sample in features
+    selected_features = random.sample(list(features), m) # select the mth sample in features with m counts
     # branch splitting criteria, best_gain=-1 -> if gain > best_gain(-1) => always true for first 
-    best_feature, best_gain, best_threshold = None, -1, None 
-
+    best_feature, best_gain, best_threshold = None, -1, None # initial setting before for loop
 
     ####### select features based on information gain ####### 
     for feature in selected_features:
         # categorical attribute -> best_threshold : no need
         if feature.endswith('_cat'):
+            ### information gain 구하기
             # Evaluate gain for categorical feature
             values = X[feature].unique() # unique values in attribute
-
-            ### information gain 구하기
             subsets = []
             weighted_entropy = 0
             # try all values in feature
@@ -222,8 +220,9 @@ def build_tree(X, y, features, depth=0):
 
         # numerical attribute -> best_threshold : need
         else:
+            ### information gain 구하기
             # threshold is selected as average value in features.
-            threshold = X[feature].mean()
+            threshold = X[feature].mean() ## threshold ==> average use! 
             # left : same or lower than average / right : higher than average
             # X[feature] <= threshold : [True, True, False, True, True, False]
             # y[X[features] <= threshold] : y[[True, True, False, True, True, False]] = y[(index)0,1,3,4] = [(y_value)1,1,1,0]
@@ -269,14 +268,14 @@ def build_tree(X, y, features, depth=0):
             # get data only which column=best_feature is "value"
             subset_y = y[X[best_feature] == value]
             ########## make subtree and connect to child node ##########
-            # new features
+            # new features ==> usually categorical attribute, not using again
             new_features = []
             # f in features
             for f in features:
                 if f != best_feature:
                     new_features.append(f)
             # excluding best_feature, create new_featrues list and operate build_tree function again
-            child_subtree = build_tree(subset_X,subset_y,new_features,depth + 1)
+            child_subtree = build_tree(subset_X,subset_y,new_features,depth + 1) ## ===> next iteration
             # connect to child node
             tree.children[value] = child_subtree
     
@@ -289,52 +288,75 @@ def build_tree(X, y, features, depth=0):
         
         # make left and right branch
         # use boolean indexing, select index(instance) which is true
-        tree.children["<="] = build_tree(X[left_mask], y[left_mask], features, depth + 1)
-        tree.children[">"] = build_tree(X[right_mask], y[right_mask], features, depth + 1)
+        # no need new features ==> usually numerical attribute, using again because threshold can be changed
+        tree.children["<="] = build_tree(X[left_mask], y[left_mask], features, depth + 1)  ## ===> next iteration
+        tree.children[">"] = build_tree(X[right_mask], y[right_mask], features, depth + 1)  ## ===> next iteration
     
     # final tree is returned by checking stopping criteria
     return tree
 
 
 ##################################### make prediction ##################################### 
-# Predict by "majority voting" from all trees in the forest
+# Predict by majority voting from all trees in the forest
 def random_forest_predict(trees, X_test):
+    # Collect predictions from all trees (shape: [num_trees, num_X_test_samples])
+    # k-fold function result => test dataset fixed
+    # test sample : 3, tree: 4 => [[1,0,0],[1,1,1],[0,1,1],[1,1,1]]
     tree_preds = np.array([predict(tree, X_test) for tree in trees])
-    sample_count=X_test.shape[0]
-    print("trees_pred")
-    print(tree_preds.shape)
-    final_preds = []
-    for i in range(sample_count):
-        row_preds = tree_preds[:, i]
+    # Total number of test samples
+    test_all = X_test.shape[0]  
+    # List to store final predictions after majority voting
+    final_preds = [] 
+
+    # Iterate over each sample
+    for i in range(test_all):
+        # tree_preds[:, i] ==> ith sample collection
+        # test sample : 3, tree: 4 => [[1,0,0],[1,1,1],[0,1,1],[1,1,1]] ====> tree_preds[:, 0]=[1,1,0,1] ==> extract 0th values in list
+        row_preds = tree_preds[:, i]  # Get predictions for the i-th sample from all trees
+
+        ### Majority Voting
+        # Filter out None values and count occurrences of each predicted class
+        # Result :: values=[0, 1] counts =[1, 3]
         values, counts = np.unique(row_preds[row_preds != None], return_counts=True)
+
+        # row_preds = [None, None] ---> Result :: value=[] count=[] -> len(count)=0
         if len(counts) == 0:
+            # If no valid predictions, append None
             final_preds.append(None)
+        elif len(counts) > 1 and counts[0] == counts[1]:
+            final_preds.append(random.choice(values))
         else:
+            # Select the class with the highest vote (majority voting) -> argmax
+            # argmax : return biggest value's index
             final_preds.append(values[np.argmax(counts)])
+
+    # Return the final predictions as a numpy array
     return np.array(final_preds)
+
 
 # Predict labels for each row in dataset using a single decision tree
 def predict(tree, X_test):
     # gather all the prediction results
     predictions = []
 
+    ##### repeat X_test counts #####
     # get index(not using), row(samples) from itterows
-    for index, row in X_test.iterrows():
+    for index, row in X_test.iterrows(): # iterate row by row
         # initialize the node = tree
         # each sample starts to search from root of tree
         node = tree
-
-        # repeat until reaching out to the leaf node
+        # repeat until reaching out to the leaf node (label exist -> leaf node)
+        # input value into tree's node
         while node.label is None:
             # get the current node feature's value
             val = row[node.feature]
 
             # if "categorical" attribute
             if node.threshold is None:
-                if val in node.children:
+                if val in node.children: # val in children node -> follow children node => become current node
                     node = node.children[val]
                 else:
-                    node = None
+                    node = None # no branch to follow
                     break
 
             # if "numerical" attribute
@@ -345,9 +367,9 @@ def predict(tree, X_test):
                 else:
                     # move to right child node
                     node = node.children.get(">")
-        
-        # if node is not None -> add to prediction
-        if node is not None:
+
+        ##### X_test counts -> each test sample prediction #####
+        if node is not None: # final prediction
             predictions.append(node.label)
         else:
             predictions.append(None)

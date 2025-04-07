@@ -1,121 +1,64 @@
 {
-    "feature": "attr11_cat",
+    "feature": "attr3_cat",
     "threshold": null,
     "children": {
-        "Rural": {
-            "feature": "attr3_cat",
-            "threshold": null,
+        "0": {
+            "feature": "attr7_num",
+            "threshold": 1351.349586794215,
             "children": {
-                "0": {
-                    "feature": "attr1_cat",
+                "<=": {
+                    "feature": "attr11_cat",
                     "threshold": null,
                     "children": {
-                        "Male": {
-                            "feature": "attr10_cat",
-                            "threshold": null,
-                            "children": {
-                                "0": {
-                                    "feature": "attr6_num",
-                                    "threshold": 5409.4,
-                                    "children": {
-                                        "<=": {
-                                            "label": 0
-                                        },
-                                        ">": {
-                                            "label": 0
-                                        }
-                                    }
-                                },
-                                "1": {
-                                    "feature": "attr2_cat",
-                                    "threshold": null,
-                                    "children": {
-                                        "Yes": {
-                                            "label": 1
-                                        },
-                                        "No": {
-                                            "label": 1
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "Female": {
-                            "feature": "attr10_cat",
-                            "threshold": null,
-                            "children": {
-                                "0": {
-                                    "label": 0
-                                },
-                                "1": {
-                                    "feature": "attr6_num",
-                                    "threshold": 5491.181818181818,
-                                    "children": {
-                                        "<=": {
-                                            "label": 1
-                                        },
-                                        ">": {
-                                            "label": 0
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "1": {
-                    "feature": "attr6_num",
-                    "threshold": 6096.7,
-                    "children": {
-                        "<=": {
-                            "feature": "attr4_cat",
-                            "threshold": null,
-                            "children": {
-                                "Not Graduate": {
-                                    "feature": "attr9_num",
-                                    "threshold": 315.0,
-                                    "children": {
-                                        "<=": {
-                                            "label": 0
-                                        },
-                                        ">": {
-                                            "label": 0
-                                        }
-                                    }
-                                },
-                                "Graduate": {
-                                    "label": 1
-                                }
-                            }
-                        },
-                        ">": {
-                            "feature": "attr9_num",
-                            "threshold": 300.0,
+                        "Urban": {
+                            "feature": "attr7_num",
+                            "threshold": 37.673469387755105,
                             "children": {
                                 "<=": {
-                                    "label": 1
+                                    "feature": "attr6_num",
+                                    "threshold": 6357.148936170212,
+                                    "children": {
+                                        "<=": {
+                                            "label": 1
+                                        },
+                                        ">": {
+                                            "label": 0
+                                        }
+                                    }
                                 },
                                 ">": {
+                                    "label": 1
+                                }
+                            }
+                        },
+                        "Semiurban": {
+                            "feature": "attr10_cat",
+                            "threshold": null,
+                            "children": {
+                                "1": {
+                                    "feature": "attr5_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "No": {
+                                            "label": 1
+                                        },
+                                        "Yes": {
+                                            "label": 1
+                                        }
+                                    }
+                                },
+                                "0": {
                                     "label": 0
                                 }
                             }
-                        }
-                    }
-                },
-                "2": {
-                    "feature": "attr7_num",
-                    "threshold": 2305.3333333333335,
-                    "children": {
-                        "<=": {
-                            "feature": "attr4_cat",
-                            "threshold": null,
+                        },
+                        "Rural": {
+                            "feature": "attr6_num",
+                            "threshold": 4814.463414634146,
                             "children": {
-                                "Not Graduate": {
-                                    "label": 0
-                                },
-                                "Graduate": {
+                                "<=": {
                                     "feature": "attr8_num",
-                                    "threshold": 137.66666666666666,
+                                    "threshold": 97.21052631578948,
                                     "children": {
                                         "<=": {
                                             "label": 1
@@ -124,55 +67,112 @@
                                             "label": 1
                                         }
                                     }
+                                },
+                                ">": {
+                                    "feature": "attr5_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Yes": {
+                                            "label": 0
+                                        },
+                                        "No": {
+                                            "label": 0
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        ">": {
-                            "label": 1
                         }
                     }
                 },
-                "3+": {
-                    "feature": "attr7_num",
-                    "threshold": 1012.1428571428571,
+                ">": {
+                    "feature": "attr11_cat",
+                    "threshold": null,
                     "children": {
-                        "<=": {
-                            "feature": "attr6_num",
-                            "threshold": 5474.444444444444,
+                        "Semiurban": {
+                            "feature": "attr10_cat",
+                            "threshold": null,
                             "children": {
-                                "<=": {
-                                    "feature": "attr4_cat",
+                                "1": {
+                                    "feature": "attr5_cat",
                                     "threshold": null,
                                     "children": {
-                                        "Graduate": {
+                                        "No": {
                                             "label": 1
                                         },
-                                        "Not Graduate": {
+                                        "Yes": {
                                             "label": 0
                                         }
                                     }
                                 },
-                                ">": {
-                                    "label": 1
+                                "0": {
+                                    "feature": "attr1_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Male": {
+                                            "label": 0
+                                        },
+                                        "Female": {
+                                            "label": 1
+                                        }
+                                    }
                                 }
                             }
                         },
-                        ">": {
-                            "feature": "attr6_num",
-                            "threshold": 7808.8,
+                        "Rural": {
+                            "feature": "attr8_num",
+                            "threshold": 153.96666666666667,
                             "children": {
                                 "<=": {
-                                    "label": 0
+                                    "feature": "attr2_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Yes": {
+                                            "label": 1
+                                        },
+                                        "No": {
+                                            "label": 1
+                                        }
+                                    }
+                                },
+                                ">": {
+                                    "feature": "attr8_num",
+                                    "threshold": 208.9,
+                                    "children": {
+                                        "<=": {
+                                            "label": 1
+                                        },
+                                        ">": {
+                                            "label": 0
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "Urban": {
+                            "feature": "attr8_num",
+                            "threshold": 113.75,
+                            "children": {
+                                "<=": {
+                                    "feature": "attr10_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "1": {
+                                            "label": 1
+                                        },
+                                        "0": {
+                                            "label": 0
+                                        }
+                                    }
                                 },
                                 ">": {
                                     "feature": "attr2_cat",
                                     "threshold": null,
                                     "children": {
-                                        "No": {
-                                            "label": 0
-                                        },
                                         "Yes": {
                                             "label": 1
+                                        },
+                                        "No": {
+                                            "label": 0
                                         }
                                     }
                                 }
@@ -182,138 +182,168 @@
                 }
             }
         },
-        "Urban": {
-            "feature": "attr2_cat",
-            "threshold": null,
-            "children": {
-                "Yes": {
-                    "feature": "attr10_cat",
-                    "threshold": null,
-                    "children": {
-                        "1": {
-                            "feature": "attr9_num",
-                            "threshold": 319.4117647058824,
-                            "children": {
-                                "<=": {
-                                    "feature": "attr4_cat",
-                                    "threshold": null,
-                                    "children": {
-                                        "Graduate": {
-                                            "label": 1
-                                        },
-                                        "Not Graduate": {
-                                            "label": 1
-                                        }
-                                    }
-                                },
-                                ">": {
-                                    "feature": "attr5_cat",
-                                    "threshold": null,
-                                    "children": {
-                                        "No": {
-                                            "label": 1
-                                        },
-                                        "Yes": {
-                                            "label": 0
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "0": {
-                            "label": 0
-                        }
-                    }
-                },
-                "No": {
-                    "feature": "attr10_cat",
-                    "threshold": null,
-                    "children": {
-                        "1": {
-                            "feature": "attr1_cat",
-                            "threshold": null,
-                            "children": {
-                                "Male": {
-                                    "feature": "attr5_cat",
-                                    "threshold": null,
-                                    "children": {
-                                        "No": {
-                                            "label": 0
-                                        },
-                                        "Yes": {
-                                            "label": 0
-                                        }
-                                    }
-                                },
-                                "Female": {
-                                    "feature": "attr3_cat",
-                                    "threshold": null,
-                                    "children": {
-                                        "0": {
-                                            "label": 1
-                                        },
-                                        "1": {
-                                            "label": 0
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "0": {
-                            "label": 0
-                        }
-                    }
-                }
-            }
-        },
-        "Semiurban": {
+        "1": {
             "feature": "attr10_cat",
             "threshold": null,
             "children": {
                 "0": {
+                    "label": 0
+                },
+                "1": {
+                    "feature": "attr8_num",
+                    "threshold": 142.77551020408163,
+                    "children": {
+                        "<=": {
+                            "feature": "attr8_num",
+                            "threshold": 99.58064516129032,
+                            "children": {
+                                "<=": {
+                                    "feature": "attr4_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Graduate": {
+                                            "label": 0
+                                        },
+                                        "Not Graduate": {
+                                            "label": 0
+                                        }
+                                    }
+                                },
+                                ">": {
+                                    "feature": "attr1_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Male": {
+                                            "label": 1
+                                        },
+                                        "Female": {
+                                            "label": 1
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        ">": {
+                            "feature": "attr4_cat",
+                            "threshold": null,
+                            "children": {
+                                "Graduate": {
+                                    "feature": "attr6_num",
+                                    "threshold": 10162.411764705883,
+                                    "children": {
+                                        "<=": {
+                                            "label": 1
+                                        },
+                                        ">": {
+                                            "label": 0
+                                        }
+                                    }
+                                },
+                                "Not Graduate": {
+                                    "label": 1
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "3+": {
+            "feature": "attr10_cat",
+            "threshold": null,
+            "children": {
+                "1": {
                     "feature": "attr2_cat",
                     "threshold": null,
                     "children": {
-                        "Yes": {
+                        "No": {
                             "label": 0
                         },
-                        "No": {
-                            "feature": "attr7_num",
-                            "threshold": 2545.0,
+                        "Yes": {
+                            "feature": "attr4_cat",
+                            "threshold": null,
                             "children": {
-                                "<=": {
-                                    "label": 0
+                                "Graduate": {
+                                    "feature": "attr5_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Yes": {
+                                            "label": 1
+                                        },
+                                        "No": {
+                                            "label": 1
+                                        }
+                                    }
                                 },
-                                ">": {
+                                "Not Graduate": {
                                     "label": 1
                                 }
                             }
                         }
                     }
                 },
-                "1": {
-                    "feature": "attr4_cat",
-                    "threshold": null,
+                "0": {
+                    "feature": "attr9_num",
+                    "threshold": 317.14285714285717,
                     "children": {
-                        "Graduate": {
+                        "<=": {
+                            "label": 0
+                        },
+                        ">": {
                             "feature": "attr8_num",
-                            "threshold": 145.3846153846154,
+                            "threshold": 235.75,
                             "children": {
                                 "<=": {
-                                    "feature": "attr6_num",
-                                    "threshold": 4818.671875,
+                                    "feature": "attr11_cat",
+                                    "threshold": null,
                                     "children": {
-                                        "<=": {
+                                        "Urban": {
                                             "label": 1
                                         },
-                                        ">": {
-                                            "label": 1
+                                        "Semiurban": {
+                                            "label": 0
                                         }
                                     }
                                 },
                                 ">": {
-                                    "feature": "attr8_num",
-                                    "threshold": 206.725,
+                                    "label": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "2": {
+            "feature": "attr10_cat",
+            "threshold": null,
+            "children": {
+                "1": {
+                    "feature": "attr7_num",
+                    "threshold": 1641.6208330791667,
+                    "children": {
+                        "<=": {
+                            "feature": "attr4_cat",
+                            "threshold": null,
+                            "children": {
+                                "Graduate": {
+                                    "feature": "attr11_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Urban": {
+                                            "label": 1
+                                        },
+                                        "Semiurban": {
+                                            "label": 1
+                                        },
+                                        "Rural": {
+                                            "label": 1
+                                        }
+                                    }
+                                },
+                                "Not Graduate": {
+                                    "feature": "attr7_num",
+                                    "threshold": 1365.0,
                                     "children": {
                                         "<=": {
                                             "label": 1
@@ -325,10 +355,34 @@
                                 }
                             }
                         },
-                        "Not Graduate": {
-                            "label": 1
+                        ">": {
+                            "feature": "attr9_num",
+                            "threshold": 356.0,
+                            "children": {
+                                "<=": {
+                                    "label": 1
+                                },
+                                ">": {
+                                    "feature": "attr11_cat",
+                                    "threshold": null,
+                                    "children": {
+                                        "Urban": {
+                                            "label": 1
+                                        },
+                                        "Semiurban": {
+                                            "label": 1
+                                        },
+                                        "Rural": {
+                                            "label": 0
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
+                },
+                "0": {
+                    "label": 0
                 }
             }
         }
